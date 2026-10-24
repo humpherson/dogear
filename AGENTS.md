@@ -1,0 +1,16 @@
+# Dogear development guidance
+
+- Read `spec/DOGEAR_TECHNICAL_SPEC.md` and README before changing product behavior.
+- This is a static React/TypeScript application. Keep HashRouter, Vite base-path support, and Supabase as the only auth/storage backend. No SSR, custom backend, ORM, analytics, or fake successful persistence.
+- Use small accessible components, CSS theme tokens, React Hook Form/Zod, and TanStack Query. Service code owns HTTP/database calls. Private query keys include the user ID; clear cached private data when identity changes.
+- Maintain the forest/paper/gold/ink palette and `dogear.` wordmark. Respect reduced motion, labels, focus visibility, and keyboard search navigation.
+- Use Node from `.nvmrc`, `npm ci`, and the lockfile. The Supabase CLI is a pinned local dependency.
+- Never put service-role/secret keys in frontend code, `VITE_*`, or committed env files. Public tables require RLS and relational ownership constraints. Security-definer RPCs require an empty/fixed search path, bounded validation, explicit caller ownership, and restricted execution grants.
+- Save and delete quotes through the RPCs. Preserve their shared per-user/book transaction lock and last-quote cleanup. Selecting a book must not create a library entry. Catalog records are immutable to browser callers.
+- Run `npm run lint`, `npm run typecheck`, `npm run test -- --run`, `npm run format:check`, and `npm run build` after changes. Real database/auth changes also require `npm run test:db` and `npm run test:e2e` with Docker/local Supabase. Browser tests build with local public configuration; no production credentials are needed.
+- Migration changes require regenerating `src/types/database.ts` with `npm run db:types` and security/integrity checks. Avoid resetting any hosted database.
+- Definition of done: locally verified auth and quote lifecycle, cross-user denial, static root/project builds, responsive accessible UI, updated setup docs, no privileged key in assets. Report exact unrun/blocked checks; hosted deployment is not verified by a local build.
+
+- Book discovery uses Open Library work IDs (`OL…W`), not edition IDs. Keep per-tab metadata requests at least 1.1 seconds apart, cache searches/descriptions, and fetch descriptions only on selection. Preserve legacy Google Books catalog/quote records; never relabel them as Open Library. No Google API key is needed.
+
+- The public homepage samples from all user-added quote text through the narrowly scoped security-definer `get_random_homepage_quote()` RPC, as explicitly requested. Return only text, book author/title, and publication year. Never return notes, page references, account metadata, owner IDs, association IDs, or timestamps. Keep raw-table RLS and ownership constraints unchanged; no editorial sample table or fallback data.

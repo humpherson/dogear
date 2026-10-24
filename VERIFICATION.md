@@ -1,0 +1,77 @@
+# Dogear verification
+
+Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
+
+## Navigation sign-out
+
+Signed-in navigation now offers Library, Add quote, and a Sign out button. Settings is hidden, its route redirects to the library, and its component remains dormant for future use. Successful sign-out returns to the sign-in screen from any page, including password recovery. Sign out uses the existing Supabase session lifecycle and private-cache clearing; pending feedback prevents repeat clicks and failures show a retryable error.
+
+Validation: 56 unit/component/service tests passed, including sign-out pending/error/retry behaviour. All 8 desktop/mobile production browser checks passed at the project path, including signing out directly from navigation, hidden Settings and its URL redirect, password recovery, and account switching. Lint, typecheck, formatting, and production builds passed. No database schema, permissions, or authentication backend changed; database checks were not repeated for this navigation change.
+
+## Personal library quote hero
+
+The signed-in library now opens with a full-width hero above the library heading and Add quote button. It shows one of the current user’s quotations, author/book attribution, and a Refresh button. Refresh selects another quote when available, retaining the current quote on an error. Single-quote libraries explain the disabled refresh action; empty libraries keep the existing call to action. Full quotation text wraps without an internal scroll area.
+
+Applied additive migration `202610240005_library_quote_hero.sql` locally without resetting existing data and regenerated database types. The separate authenticated `get_random_library_quote(exclude_quote_id)` RPC uses invoker privileges, RLS, and `auth.uid()` to constrain sampling to the caller. Anonymous invocation is denied. It returns no notes or account identifiers. Private query keys include the signed-in user ID and existing mutation invalidation keeps samples current.
+
+Validation: 55 unit/component/service tests and 67 real database checks passed, including refresh exclusion, single/empty libraries, owner isolation, anonymous denial, edit visibility, retry behaviour, and clearing the previous account’s quotation. All 8 desktop/mobile production browser checks passed at the root URL with the revised full-width layout, including quote refresh, attribution links, accessibility, screen-width measurements, heading placement, and no horizontal overflow. All 8 project-path browser checks also passed before the layout revision. Desktop/mobile screenshots of the revised hero were inspected. Lint, typecheck, formatting, and production builds passed.
+
+## Public sampling of all user-added quotes
+
+As explicitly requested, the public homepage now samples from all actual user-added quotation text. The replacement RPC `get_random_homepage_quote()` joins saved quotes to their book metadata and returns exactly four fields: text, book author, book title, and publication year. It never returns note text, page references, account/owner identifiers, library-association IDs, or timestamps. Existing raw-table grants/RLS and quote mutation rules remain unchanged.
+
+Applied additive migration `202610240004_personal_homepage_quotes.sql` locally without resetting saved user data. It removes the temporary editorial sample table/RPC introduced during the earlier interpretation of the request. There is no editorial pool, fake fallback quote, opt-in flag, or automatic copying of user content. The page fetches once per visit; editing/deleting a quotation affects future samples directly. The quote form and landing-page wording disclose public quotation text and private notes/account data. The “A little quip” card expands to show the full quotation without internal scrolling.
+
+Validation: 46 unit/component/service tests and 59 database checks passed. All 8 desktop/mobile production browser checks passed under the project path and all 8 passed at the domain root. The root-path checks include the revised homepage paragraph, UK-English document language, “A little quip” title, a real user-added database quote, and the four-field public response with notes/account data excluded. Manual browser measurements confirmed that short and long quotes show their full text without internal or horizontal scrolling at desktop/mobile widths. Lint, typecheck, formatting, and production build passed.
+
+## Accordion baseline
+
+The Add quote book picker now uses a single-open, keyboard-accessible accordion. It defaults to library selection when saved books are available and new-book search when the library is empty. Loading/error states allow new-book search; a user’s explicit choice or input focus prevents asynchronous library results from switching the panel unexpectedly. Opening one section hides and unmounts the other section's inputs.
+
+Validation: 37 unit/component/service tests passed, including populated/empty defaults, panel exclusivity, keyboard switching, saved-book selection, and delayed library loading. Lint and typecheck passed. All 8 desktop/mobile production browser checks passed, including panel switching, hidden-input assertions, quote saving, and axe accessibility checks. Formatting and production build passed. No database or authentication behavior changed.
+
+## Saved-book picker baseline
+
+The top-bar Add quote page now offers books already in the signed-in user's library, with a local title/author filter, covers, authors, and quote counts. Open Library search remains available beneath it, including while the private library is loading, empty, or unavailable. Saved-book selection uses stored metadata, including legacy Google records, without external search or description requests.
+
+Validation for this UI change: 35 unit/component/service tests; lint and typecheck; desktop/mobile production browser checks covering top-bar navigation, local filtering, no external metadata requests, reuse of the existing book URL, one library card, and increased quote counts. The picker is included in axe accessibility checks. Formatting and production build are checked before handoff. No database/auth behavior or migrations changed, so the database checks below remain results from the Open Library integration stage.
+
+## Open Library integration baseline
+
+Open Library now supplies book search, cover URLs, and selected-work descriptions. No API key is required. Google Books API calls and configuration have been removed. Existing Google catalog rows and their quotes remain intact; the additive migration permits further quotes against those existing records while requiring Open Library for new catalog entries.
+
+- Search uses a compact field list and three-character minimum, 300 ms debounce, cancellation, and 30-minute caching.
+- Search and selected-description requests share a per-tab queue with at least 1.1 seconds between starts; retries respect `Retry-After`. This is not a global cross-tab/per-IP limiter.
+- Descriptions load only after selection, accept string/object formats, and render as text. Missing descriptions do not block saving; loading metadata does not erase entered quotations.
+- Work IDs identify saved books. The UI labels dates as first-publication years and does not infer edition ISBNs.
+- Metadata requests time out after 20 seconds. Cover IDs use direct HTTPS image URLs with missing-image fallback. Open Library attribution links are present.
+
+## Open Library integration checks and results
+
+| Check                                     | Result                                                                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint`                            | Passed                                                                                                                    |
+| `npm run typecheck`                       | Passed                                                                                                                    |
+| `npm run format:check`                    | Passed                                                                                                                    |
+| `npm run test -- --run`                   | 30 tests passed                                                                                                           |
+| `npx supabase migration up --local`       | Applied `202610240002_open_library.sql` without resetting existing data                                                   |
+| Database TypeScript generation            | Regenerated from the migrated local schema                                                                                |
+| `npm run test:db`                         | 45 real database checks passed, including legacy Google compatibility                                                     |
+| `npm run test:e2e`                        | 8 desktop/mobile checks passed under `/dogear/`                                                                           |
+| `TEST_BASE_PATH=/ npm run test:e2e`       | 8 desktop/mobile checks passed at `/`                                                                                     |
+| `npm run build`                           | Passed; produces static assets in `dist/`                                                                                 |
+| Live Open Library search                  | HTTP 200 with real titles, authors, years, and cover IDs                                                                  |
+| `node scripts/live-openlibrary-check.mjs` | Real browser search → selection → description → save quote → delete quote → empty library passed without API interception |
+
+Automated browser suites mock Open Library for repeatability and use real local Supabase for authentication, emails, profiles, quote storage, and account isolation. The optional live check uses real Open Library and local Supabase; it removes its temporary account and newly created catalog fixture. A screenshot from the live saved-book screen was inspected.
+
+Database checks cover cross-user access denial, anonymous access, restricted direct writes, composite ownership integrity, validation, atomic rollback, concurrent saves, last-quote cleanup, concurrent save/delete, and continued save/delete support for existing Google catalog records. New Google catalog inserts and malformed Open Library/edition IDs are rejected.
+
+Baseline foundation verification also passed `npm ci` with zero reported vulnerabilities, a clean local database reset, missing-production-configuration rejection, static-asset credential checks, responsive screenshots, and axe checks on the tested screens/dialog. Those baseline installation and security checks were recorded before the provider switch; package dependencies have not changed.
+
+## Running locally and remaining setup
+
+- Development app: `http://127.0.0.1:5173/`; local email inbox: `http://127.0.0.1:54324/`. The ignored `.env.local` contains only public Supabase settings.
+- Hosted Supabase, production SMTP, deployment-domain callbacks, and GitHub Pages publication remain unverified. No remote is configured and nothing was published. Follow README for setup and apply all migrations before deploying the updated frontend.
+- Register the deployed application with Open Library as requested by its usage guidance. For frequent/shared-IP use, arrange identification and shared caching/rate limiting; the static per-tab client does not claim an identified-client allowance.
+- Manual entry remains deferred. Legacy Google and Open Library books are preserved as separate provider records; they are not automatically merged.

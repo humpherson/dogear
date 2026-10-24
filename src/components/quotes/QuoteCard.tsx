@@ -1,0 +1,107 @@
+import { useState } from 'react';
+import * as AlertDialog from '@radix-ui/react-alert-dialog';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { QuoteForm } from './QuoteForm';
+import { deleteQuote, editQuote } from '../../services/quotesService';
+import { message, type QuoteInput } from '../../lib/validation';
+import type { Quote } from '../../types';
+export function QuoteCard({
+  quote,
+  onDeleted,
+}: {
+  quote: Quote;
+  onDeleted: () => void;
+}) {
+  const [editing, setEditing] = useState(false),
+    [confirm, setConfirm] = useState(false);
+  const client = useQueryClient();
+  const edit = useMutation({
+    mutationFn: (input: QuoteInput) => editQuote(quote.id, input),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['private'] });
+      setEditing(false);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteQuote(quote.id),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['private'] });
+      setConfirm(false);
+      onDeleted();
+    },
+  });
+  return (
+    <article className="quote-card">
+      {editing ? (
+        <QuoteForm
+          initial={{
+            text: quote.text,
+            page_number: quote.page_number || '',
+            note: quote.note || '',
+          }}
+          onSubmit={(input) => edit.mutate(input)}
+          pending={edit.isPending}
+          error={edit.isError ? message(edit.error) : undefined}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <>
+          <blockquote>{quote.text}</blockquote>
+          {quote.page_number && (
+            <p className="page-ref">Page / location {quote.page_number}</p>
+          )}
+          {quote.note && <p className="private-note">{quote.note}</p>}
+          <div className="quote-meta">
+            <time dateTime={quote.created_at}>
+              {new Date(quote.created_at).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </time>
+            <div className="actions">
+              <button className="text-button" onClick={() => setEditing(true)}>
+                Edit
+              </button>
+              <AlertDialog.Root open={confirm} onOpenChange={setConfirm}>
+                <AlertDialog.Trigger asChild>
+                  <button className="text-button">Delete</button>
+                </AlertDialog.Trigger>
+                <AlertDialog.Portal>
+                  <AlertDialog.Overlay className="dialog-overlay" />
+                  <AlertDialog.Content className="dialog">
+                    <AlertDialog.Title>Let this quote go?</AlertDialog.Title>
+                    <AlertDialog.Description>
+                      This cannot be undone. If this is your last quote from the
+                      book, the book will also leave your library.
+                    </AlertDialog.Description>
+                    {remove.isError && (
+                      <p role="alert">{message(remove.error)}</p>
+                    )}
+                    <div className="actions">
+                      <AlertDialog.Cancel asChild>
+                        <button
+                          className="secondary"
+                          disabled={remove.isPending}
+                        >
+                          Keep quote
+                        </button>
+                      </AlertDialog.Cancel>
+                      <button
+                        className="danger"
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate()}
+                      >
+                        {remove.isPending ? 'Deleting…' : 'Delete quote'}
+                      </button>
+                    </div>
+                  </AlertDialog.Content>
+                </AlertDialog.Portal>
+              </AlertDialog.Root>
+            </div>
+          </div>
+        </>
+      )}
+    </article>
+  );
+}
