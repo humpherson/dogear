@@ -582,8 +582,6 @@ button.accordion-trigger:focus-visible {
   list-style: none;
   padding: 0;
   margin: 16px 0 0;
-  max-height: 330px;
-  overflow-y: auto;
   border: 1px solid #dedbce;
   border-radius: 6px;
 }

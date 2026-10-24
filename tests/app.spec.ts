@@ -850,7 +850,7 @@ test('switching accounts in the same browser clears private library data', async
 test('creates, reuses, renames and moves personal collections without book searches', async ({
   page,
 }) => {
-  await signup(page);
+  const email = await signup(page);
   let bookRequests = 0;
   await page.route('https://openlibrary.org/**', (route) => {
     bookRequests++;
@@ -878,63 +878,23 @@ test('creates, reuses, renames and moves personal collections without book searc
     'aria-expanded',
     'false',
   );
-  const backgroundChoices = page.getByRole('group', {
-    name: 'Background colour',
-    exact: true,
-  });
-  await expect(backgroundChoices.getByRole('radio')).toHaveCount(0);
-  await backgroundChoices.getByRole('button').click();
-  await expect(backgroundChoices.getByRole('radio')).toHaveCount(12);
-  await page.keyboard.press('Escape');
-  await expect(backgroundChoices.getByRole('button')).toBeFocused();
-  await expect(backgroundChoices.getByRole('radio')).toHaveCount(0);
-  await backgroundChoices.getByRole('button').click();
-  await page.screenshot({
-    path: `test-results/colour-dropdown-${page.viewportSize()!.width}.png`,
-    fullPage: true,
-  });
-  await expect(page.locator('input[type=color]')).toHaveCount(0);
-  const swatchSize = await backgroundChoices
-    .locator('.colour-swatch')
-    .first()
-    .boundingBox();
-  expect(swatchSize!.width).toBeGreaterThanOrEqual(44);
-  expect(swatchSize!.height).toBeGreaterThanOrEqual(44);
-  await page.getByLabel('Collection name').click();
-  await expect(backgroundChoices.getByRole('radio')).toHaveCount(0);
-  await page
-    .getByRole('group', { name: 'Background colour', exact: true })
-    .getByRole('button')
-    .click();
-  await page
-    .getByRole('group', { name: 'Background colour', exact: true })
-    .getByRole('radio', { name: 'Sage', exact: true })
-    .check();
-  await page
-    .getByRole('group', { name: 'Icon colour', exact: true })
-    .getByRole('button')
-    .click();
-  await page
-    .getByRole('group', { name: 'Icon colour', exact: true })
-    .getByRole('radio', { name: 'Forest', exact: true })
-    .check();
-  await page
-    .getByRole('group', { name: 'Text colour', exact: true })
-    .getByRole('button')
-    .click();
-  await page
-    .getByRole('group', { name: 'Text colour', exact: true })
-    .getByRole('radio', { name: 'Forest', exact: true })
-    .check();
-  await page
-    .getByRole('group', { name: 'Border colour', exact: true })
-    .getByRole('button')
-    .click();
-  await page
-    .getByRole('group', { name: 'Border colour', exact: true })
-    .getByRole('radio', { name: 'Moss', exact: true })
-    .check();
+  for (const name of [
+    'Background colour',
+    'Icon colour',
+    'Text colour',
+    'Border colour',
+  ]) {
+    await expect(page.getByRole('group', { name, exact: true })).toHaveCount(0);
+  }
   await page.getByRole('button', { name: 'Use this collection' }).click();
+  for (const name of [
+    'Background colour',
+    'Icon colour',
+    'Text colour',
+    'Border colour',
+  ]) {
+    await expect(page.getByRole('group', { name, exact: true })).toHaveCount(0);
+  }
   await page
     .getByLabel('The words you want to keep')
     .fill('A small observation worth keeping.');
@@ -950,7 +910,7 @@ test('creates, reuses, renames and moves personal collections without book searc
   );
   await expect(page.locator('.collection-cover')).toHaveCSS(
     'background-color',
-    'rgb(212, 228, 208)',
+    'rgb(245, 240, 230)',
   );
   await expect(page.locator('.collection-cover > span')).toHaveText(
     'Passing thoughts',
@@ -961,6 +921,38 @@ test('creates, reuses, renames and moves personal collections without book searc
     path: `test-results/collection-${page.viewportSize()!.width}.png`,
     fullPage: true,
   });
+  // Simulate a collection with previously saved custom colours. Hidden controls
+  // must not reset them when the name/icon is edited or more quotes are added.
+  const owner = createClient<Database>(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  expect(
+    (
+      await owner.auth.signInWithPassword({
+        email,
+        password: 'Reading-words-123',
+      })
+    ).error,
+  ).toBeNull();
+  const collectionId = page.url().split('/collections/')[1];
+  expect(
+    (
+      await owner.rpc('edit_collection', {
+        collection_id: collectionId,
+        collection_name: 'Passing thoughts',
+        appearance: {
+          background_colour: '#eee0d0',
+          icon_colour: '#b8775e',
+          text_colour: '#342a20',
+          border_colour: '#96713d',
+        },
+      })
+    ).error,
+  ).toBeNull();
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'Edit collection' }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Edit collection' }).click();
   let dialog = page.getByRole('alertdialog');
   await dialog.getByLabel('Collection name').fill('Little observations');
@@ -972,38 +964,16 @@ test('creates, reuses, renames and moves personal collections without book searc
     .getByRole('group', { name: 'Collection icon', exact: true })
     .getByRole('radio', { name: 'Star', exact: true })
     .check();
-  await dialog
-    .getByRole('group', { name: 'Background colour', exact: true })
-    .getByRole('button')
-    .click();
-  await dialog
-    .getByRole('group', { name: 'Background colour', exact: true })
-    .getByRole('radio', { name: 'Sand', exact: true })
-    .check();
-  await dialog
-    .getByRole('group', { name: 'Border colour', exact: true })
-    .getByRole('button')
-    .click();
-  await dialog
-    .getByRole('group', { name: 'Border colour', exact: true })
-    .getByRole('radio', { name: 'Gold', exact: true })
-    .check();
-  await dialog
-    .getByRole('group', { name: 'Icon colour', exact: true })
-    .getByRole('button')
-    .click();
-  await dialog
-    .getByRole('group', { name: 'Icon colour', exact: true })
-    .getByRole('radio', { name: 'Clay', exact: true })
-    .check();
-  await dialog
-    .getByRole('group', { name: 'Text colour', exact: true })
-    .getByRole('button')
-    .click();
-  await dialog
-    .getByRole('group', { name: 'Text colour', exact: true })
-    .getByRole('radio', { name: 'Ink', exact: true })
-    .check();
+  for (const name of [
+    'Background colour',
+    'Icon colour',
+    'Text colour',
+    'Border colour',
+  ]) {
+    await expect(dialog.getByRole('group', { name, exact: true })).toHaveCount(
+      0,
+    );
+  }
   await dialog.getByRole('button', { name: 'Save collection' }).click();
   await expect(
     page.getByRole('heading', { name: 'Little observations', exact: true }),

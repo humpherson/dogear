@@ -3,6 +3,8 @@ import { ChevronDown } from 'lucide-react';
 import type { CollectionAppearance } from '../../types';
 import { collectionIcons, findCollectionIcon } from './collectionIcons';
 import { defaultAppearance } from './CollectionDetails';
+// Temporarily hide colour controls; retain their UI and saved-colour behaviour.
+const showColourControls = false;
 const palette = [
   ['Paper', '#f5f0e6'],
   ['Sand', '#eee0d0'],
@@ -121,6 +123,7 @@ export function CollectionAppearanceFields({
         const expanded = open === key && !disabled;
         return (
           <fieldset
+            hidden={!showColourControls}
             className="colour-choice"
             key={key}
             onKeyDown={(event) => {
