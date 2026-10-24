@@ -53,7 +53,20 @@ export type LibrarySummary = Omit<LibraryBook, 'books'> & {
 };
 export type SelectedBook = BookSearchResult | BookSummary;
 
+export type CollectionIconName =
+  | 'layers'
+  | 'music'
+  | 'tv'
+  | 'book'
+  | 'speech'
+  | 'paw-print'
+  | 'user'
+  | 'face-grinning'
+  | 'face-slightly-frowning'
+  | 'star'
+  | 'brush';
 export type CollectionAppearance = {
+  icon?: CollectionIconName;
   background_colour?: string;
   icon_colour?: string;
   text_colour?: string;

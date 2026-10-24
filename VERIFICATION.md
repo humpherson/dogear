@@ -2,6 +2,14 @@
 
 Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
 
+## Collection icon selection
+
+Added a Collection icon dropdown with Layers (the existing default) plus Music, TV, Book, Speech, Paw print, User, Grinning face, Slightly frowning face, Star and Brush. It uses labelled icon previews, native radio selection and touch targets consistent with the colour controls. Selection closes the menu and restores focus. Existing icon colour settings apply to the selected icon. Creation, Edit collection and move-to-new-collection support the choice; library cards, the saved-entry picker and collection details render the saved icon.
+
+Applied additive migration `202610240009_collection_icons.sql` locally and regenerated database types. The private collection column defaults to layers and constrains icon IDs to the supported list. The existing authenticated edit RPC validates icon choices atomically while retaining ownership, lock order, colour validation and partial-edit behaviour. Existing save/move wrappers and public quotation projection remain compatible. Apply pending migrations to hosted Supabase before deploying this frontend; no hosted changes were made here.
+
+Validation: 79 unit tests and 171 real database checks (78 existing plus 93 collection checks) passed. Database coverage includes default icons, every supported icon ID, invalid value/type rejection and rollback, cross-user denial, creating icons during a move and preserving icons during colour-only edits. Focused root desktop/mobile checks passed for Layers defaults, Music creation, Star editing, TV creation during moves, reload persistence and existing colour workflows. Lint, typecheck, formatting and production root/project builds passed. All 22 project-path desktop/mobile browser regression checks passed, including axe checks on the expanded icon menu. Desktop/mobile icon menu screenshots were inspected.
+
 ## Compact colour dropdowns
 
 Each collection appearance field now shows a closed dropdown with its current colour chip and name. Opening a dropdown reveals the existing 12 swatches; only one palette is open at a time. Choosing a swatch, including the current choice, closes the palette and restores trigger focus. Escape and outside clicks close it. Panels expand within the form to avoid clipping inside mobile dialogs. Closing on a completed outside click avoids shifting subsequent controls during a tap.

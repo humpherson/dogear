@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { CollectionAppearance } from '../../types';
+import { collectionIcons, findCollectionIcon } from './collectionIcons';
 import { defaultAppearance } from './CollectionDetails';
 const palette = [
   ['Paper', '#f5f0e6'],
@@ -37,9 +38,73 @@ export function CollectionAppearanceFields({
     document.addEventListener('click', closeOutside);
     return () => document.removeEventListener('click', closeOutside);
   }, [open]);
+  const selectedIcon = findCollectionIcon(value.icon);
+  const iconExpanded = open === 'icon' && !disabled;
+  const closeIcon = () => {
+    setOpen(null);
+    triggers.current.icon?.focus();
+  };
   return (
     <fieldset ref={root} className="collection-colours" disabled={disabled}>
-      <legend>Collection colours</legend>
+      <legend>Collection appearance</legend>
+      <fieldset
+        className="colour-choice"
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && iconExpanded) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeIcon();
+          }
+        }}
+      >
+        <legend>Collection icon</legend>
+        <button
+          type="button"
+          className="colour-dropdown-trigger"
+          ref={(node) => {
+            triggers.current.icon = node;
+          }}
+          aria-label={`Collection icon: ${selectedIcon.name}`}
+          aria-expanded={iconExpanded}
+          aria-controls={`${id}-icons`}
+          onClick={() => setOpen(iconExpanded ? null : 'icon')}
+        >
+          <selectedIcon.Icon size={24} aria-hidden="true" />
+          <span>{selectedIcon.name}</span>
+          <ChevronDown size={18} aria-hidden="true" />
+        </button>
+        <div
+          className="colour-dropdown-panel"
+          id={`${id}-icons`}
+          hidden={!iconExpanded}
+        >
+          <div className="collection-icon-options">
+            {collectionIcons.map(({ id: iconId, name, Icon }) => (
+              <label className="collection-icon-option" key={iconId}>
+                <input
+                  type="radio"
+                  name={`${id}-icon`}
+                  aria-label={name}
+                  value={iconId}
+                  checked={selectedIcon.id === iconId}
+                  onClick={() => {
+                    if (selectedIcon.id === iconId) closeIcon();
+                  }}
+                  onChange={() => {
+                    onChange({ ...value, icon: iconId });
+                    closeIcon();
+                  }}
+                />
+                <Icon size={24} aria-hidden="true" />
+                <span>{name}</span>
+                <span className="collection-icon-check" aria-hidden="true">
+                  ✓
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </fieldset>
       {(
         [
           ['background_colour', 'Background colour'],

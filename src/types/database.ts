@@ -85,6 +85,7 @@ export type Database = {
           background_colour: string;
           border_colour: string;
           created_at: string;
+          icon: string;
           icon_colour: string;
           id: string;
           name: string;
@@ -97,6 +98,7 @@ export type Database = {
           background_colour?: string;
           border_colour?: string;
           created_at?: string;
+          icon?: string;
           icon_colour?: string;
           id?: string;
           name: string;
@@ -108,6 +110,7 @@ export type Database = {
           background_colour?: string;
           border_colour?: string;
           created_at?: string;
+          icon?: string;
           icon_colour?: string;
           id?: string;
           name?: string;

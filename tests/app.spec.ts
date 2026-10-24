@@ -861,6 +861,23 @@ test('creates, reuses, renames and moves personal collections without book searc
     .getByRole('button', { name: 'Create a collection', exact: true })
     .click();
   await page.getByLabel('Collection name').fill('Passing thoughts');
+  const iconChoices = page.getByRole('group', {
+    name: 'Collection icon',
+    exact: true,
+  });
+  await expect(iconChoices.getByRole('button')).toHaveText('Layers');
+  await iconChoices.getByRole('button').click();
+  await expect(iconChoices.getByRole('radio')).toHaveCount(11);
+  await checkA11y(page);
+  await page.screenshot({
+    path: `test-results/icon-dropdown-${page.viewportSize()!.width}.png`,
+    fullPage: true,
+  });
+  await iconChoices.getByRole('radio', { name: 'Music', exact: true }).check();
+  await expect(iconChoices.getByRole('button')).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
   const backgroundChoices = page.getByRole('group', {
     name: 'Background colour',
     exact: true,
@@ -927,6 +944,10 @@ test('creates, reuses, renames and moves personal collections without book searc
   await page.getByLabel('A note to yourself').fill('A private reminder');
   await page.getByRole('button', { name: 'Keep this quote' }).click();
   await expect(page).toHaveURL(/#\/collections\//);
+  await expect(page.locator('.collection-cover svg')).toHaveAttribute(
+    'data-collection-icon',
+    'music',
+  );
   await expect(page.locator('.collection-cover')).toHaveCSS(
     'background-color',
     'rgb(212, 228, 208)',
@@ -943,6 +964,14 @@ test('creates, reuses, renames and moves personal collections without book searc
   await page.getByRole('button', { name: 'Edit collection' }).click();
   let dialog = page.getByRole('alertdialog');
   await dialog.getByLabel('Collection name').fill('Little observations');
+  await dialog
+    .getByRole('group', { name: 'Collection icon', exact: true })
+    .getByRole('button')
+    .click();
+  await dialog
+    .getByRole('group', { name: 'Collection icon', exact: true })
+    .getByRole('radio', { name: 'Star', exact: true })
+    .check();
   await dialog
     .getByRole('group', { name: 'Background colour', exact: true })
     .getByRole('button')
@@ -996,6 +1025,14 @@ test('creates, reuses, renames and moves personal collections without book searc
   await expect(dialog.getByLabel('Author or speaker')).toHaveValue('A friend');
   await dialog.getByLabel('Destination').selectOption('new');
   await dialog.getByLabel('New collection name').fill('Conversations');
+  await dialog
+    .getByRole('group', { name: 'Collection icon', exact: true })
+    .getByRole('button')
+    .click();
+  await dialog
+    .getByRole('group', { name: 'Collection icon', exact: true })
+    .getByRole('radio', { name: 'TV', exact: true })
+    .check();
   await checkA11y(page);
   await page.screenshot({
     path: `test-results/move-${page.viewportSize()!.width}.png`,
@@ -1005,6 +1042,10 @@ test('creates, reuses, renames and moves personal collections without book searc
   await expect(
     page.getByRole('heading', { name: 'Conversations', exact: true }),
   ).toBeVisible();
+  await expect(page.locator('.collection-cover svg')).toHaveAttribute(
+    'data-collection-icon',
+    'tv',
+  );
   await expect(page.locator('.quote-card')).toContainText('A private reminder');
   await expect(page.locator('.quote-credit')).toContainText('A conversation');
   await page
@@ -1032,6 +1073,10 @@ test('creates, reuses, renames and moves personal collections without book searc
   await expect(page.locator('.collection-cover')).toHaveCSS(
     'border-left-color',
     'rgb(150, 113, 61)',
+  );
+  await expect(page.locator('.collection-cover svg')).toHaveAttribute(
+    'data-collection-icon',
+    'star',
   );
   await expect(page.locator('.collection-cover svg')).toHaveCSS(
     'color',

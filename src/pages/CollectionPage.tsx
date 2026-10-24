@@ -93,6 +93,7 @@ export function CollectionPage() {
             if (open) {
               setName(entry.name);
               setAppearance({
+                icon: entry.icon,
                 background_colour: entry.background_colour,
                 text_colour: entry.text_colour,
                 icon_colour: entry.icon_colour,

@@ -86,6 +86,10 @@ try {
   });
   const id = first.library_entry.id;
   check(
+    first.library_entry.icon === 'layers',
+    'collections default to the original layers icon',
+  );
+  check(
     first.library_entry.kind === 'collection' &&
       first.library_entry.user_id === a.id,
     'collection creation returns owned canonical entry',
@@ -637,6 +641,105 @@ try {
   ]) {
     check(!!(await anon.rpc(fn, args)).error, `anonymous ${fn} denied`);
   }
+  const iconSaved = (
+    await rpc(a.client, 'save_styled_collection_quote', {
+      collection_name: 'Music icons',
+      quote: { text: 'An icon quote' },
+      appearance: { icon: 'music' },
+    })
+  )[0];
+  check(
+    iconSaved.library_entry.icon === 'music',
+    'creation persists the chosen collection icon',
+  );
+  const iconId = iconSaved.library_entry.id;
+  for (const icon of [
+    'layers',
+    'music',
+    'tv',
+    'book',
+    'speech',
+    'paw-print',
+    'user',
+    'face-grinning',
+    'face-slightly-frowning',
+    'star',
+    'brush',
+  ]) {
+    const result = await rpc(a.client, 'edit_collection', {
+      collection_id: iconId,
+      collection_name: 'Music icons',
+      appearance: { icon },
+    });
+    check(result.icon === icon, `supported icon ${icon} can be saved`);
+  }
+  for (const icon of ['invalid', '#123456', null, 123]) {
+    check(
+      !!(
+        await a.client.rpc('edit_collection', {
+          collection_id: iconId,
+          collection_name: 'Rejected icon edit',
+          appearance: { icon },
+        })
+      ).error,
+      'invalid icon rejected',
+    );
+  }
+  const afterIconFailure = await a.client
+    .from('collections')
+    .select('icon,name')
+    .eq('id', iconId)
+    .single();
+  check(
+    afterIconFailure.data.icon === 'brush' &&
+      afterIconFailure.data.name === 'Music icons',
+    'invalid icon edit rolls back name and appearance',
+  );
+  check(
+    !!(
+      await b.client.rpc('edit_collection', {
+        collection_id: iconId,
+        collection_name: 'Stolen icon',
+        appearance: { icon: 'star' },
+      })
+    ).error,
+    'cross-user icon update denied',
+  );
+  const iconMoved = await rpc(a.client, 'move_quote_with_appearance', {
+    quote_id: iconSaved.quote_record.id,
+    target_kind: 'collection',
+    new_collection_name: 'Icon move',
+    appearance: { icon: 'tv' },
+  });
+  check(
+    iconMoved.destination_entry.icon === 'tv',
+    'move creates a collection with its chosen icon',
+  );
+  const changedColour = await rpc(a.client, 'edit_collection', {
+    collection_id: iconMoved.destination_entry.id,
+    collection_name: 'Icon move',
+    appearance: { text_colour: '#123456' },
+  });
+  check(changedColour.icon === 'tv', 'colour-only edit preserves the icon');
+  check(
+    !!(
+      await a.client.rpc('save_styled_collection_quote', {
+        collection_name: 'Bad icon creation',
+        quote: { text: 'Rejected' },
+        appearance: { icon: 'invalid' },
+      })
+    ).error,
+    'invalid icon creation rejected',
+  );
+  check(
+    (
+      await a.client
+        .from('collections')
+        .select('id')
+        .eq('name', 'Bad icon creation')
+    ).data.length === 0,
+    'invalid icon leaves no collection or quote',
+  );
   console.log(`${count} Collections database checks passed.`);
 } finally {
   for (const id of users)

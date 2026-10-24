@@ -58,6 +58,7 @@ export async function saveCollectionQuote(
       : {
           collection_name: target.name,
           appearance: {
+            icon: target.icon || 'layers',
             background_colour: target.background_colour || '#f5f0e6',
             icon_colour: target.icon_colour || '#203b35',
             text_colour: target.text_colour || '#203b35',
@@ -106,6 +107,7 @@ export async function moveQuote(
       : {
           new_collection_name: target.name,
           appearance: {
+            icon: target.icon || 'layers',
             background_colour: target.background_colour || '#f5f0e6',
             icon_colour: target.icon_colour || '#203b35',
             text_colour: target.text_colour || '#203b35',

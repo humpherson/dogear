@@ -27,7 +27,7 @@ export async function getCollection(
     signal ? request.abortSignal(signal) : request
   ).maybeSingle();
   if (error) throw error;
-  return data ? { ...data, kind: 'collection' } : null;
+  return data ? ({ ...data, kind: 'collection' } as CollectionEntry) : null;
 }
 export async function getBook(
   id: string,
