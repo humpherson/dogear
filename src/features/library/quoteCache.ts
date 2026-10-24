@@ -1,8 +1,23 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { LibraryBook, LibrarySummary, Quote } from '../../types';
-import type { SavedQuote, DeletedQuote } from '../../services/quotesService';
+import {
+  type LibraryBook,
+  type LibrarySummary,
+  type LibraryEntry,
+  type FullLibraryEntry,
+  type EntryKind,
+  type Quote,
+  isCollection,
+  quoteParent,
+  entryTitle,
+} from '../../types';
+import type {
+  SavedQuote,
+  CollectionSavedQuote,
+  DeletedQuote,
+  MovedQuote,
+} from '../../services/quotesService';
 import type { LibraryQuote } from '../../services/libraryQuotesService';
-import { bookKey, quotesKey, libraryKey, heroKey } from './libraryQuery';
+import { entryKey, quotesKey, libraryKey, heroKey } from './libraryQuery';
 export function summarise(entry: LibraryBook): LibrarySummary {
   const { id, source, source_id, title, authors, published_date, cover_url } =
     entry.books;
@@ -11,12 +26,20 @@ export function summarise(entry: LibraryBook): LibrarySummary {
     books: { id, source, source_id, title, authors, published_date, cover_url },
   };
 }
-async function cancelReads(client: QueryClient, userId: string, id: string) {
+function summary(entry: FullLibraryEntry): LibraryEntry {
+  return isCollection(entry) ? entry : summarise(entry);
+}
+async function cancelReads(
+  client: QueryClient,
+  userId: string,
+  id: string,
+  kind: EntryKind,
+) {
   await Promise.all(
     [
       libraryKey(userId),
-      bookKey(userId, id),
-      quotesKey(userId, id),
+      entryKey(userId, id, kind),
+      quotesKey(userId, id, kind),
       heroKey(userId),
     ].map((queryKey) => client.cancelQueries({ queryKey, exact: true })),
   );
@@ -25,42 +48,66 @@ function reconcile(
   client: QueryClient,
   userId: string,
   id: string,
-  remainingCount: number,
+  kind: EntryKind,
+  count: number,
 ) {
-  // The mutation response already contains canonical book metadata/counts.
-  // Re-read quotes only if the local list is incomplete; do not throw away a
-  // complete, confirmed list just to fetch it again on the next navigation.
-  const quotes = client.getQueryData<Quote[]>(quotesKey(userId, id));
+  const quotes = client.getQueryData<Quote[]>(quotesKey(userId, id, kind));
   const keys =
-    quotes && quotes.length === remainingCount
+    quotes && quotes.length === count
       ? [libraryKey(userId)]
-      : [libraryKey(userId), quotesKey(userId, id)];
-  for (const queryKey of keys) {
+      : [libraryKey(userId), quotesKey(userId, id, kind)];
+  for (const queryKey of keys)
     void client
       .invalidateQueries({ queryKey, exact: true })
       .catch(() => undefined);
-  }
+}
+function updateEntry(
+  client: QueryClient,
+  userId: string,
+  kind: EntryKind,
+  id: string,
+  entry: FullLibraryEntry | null,
+) {
+  client.setQueryData(entryKey(userId, id, kind), entry);
+  client.setQueryData<LibraryEntry[]>(
+    libraryKey(userId),
+    (old) =>
+      old &&
+      (entry
+        ? old.some(
+            (item) =>
+              item.id === id &&
+              (isCollection(item) ? 'collection' : 'book') === kind,
+          )
+          ? old.map((item) =>
+              item.id === id &&
+              (isCollection(item) ? 'collection' : 'book') === kind
+                ? summary(entry)
+                : item,
+            )
+          : [summary(entry), ...old]
+        : old.filter(
+            (item) =>
+              !(
+                item.id === id &&
+                (isCollection(item) ? 'collection' : 'book') === kind
+              ),
+          )),
+  );
 }
 export async function cacheSavedQuote(
   client: QueryClient,
   userId: string,
-  result: SavedQuote,
+  result: SavedQuote | CollectionSavedQuote,
 ) {
   const entry = result.library_entry,
-    quote = result.quote_record;
+    quote = result.quote_record,
+    kind = isCollection(entry) ? 'collection' : 'book';
   if (entry.user_id !== userId || quote.user_id !== userId)
     throw new Error('Unexpected quote owner.');
-  await cancelReads(client, userId, entry.id);
-  client.setQueryData(bookKey(userId, entry.id), entry);
-  client.setQueryData<LibrarySummary[]>(
-    libraryKey(userId),
-    (old) =>
-      old &&
-      (old.some((item) => item.id === entry.id)
-        ? old.map((item) => (item.id === entry.id ? summarise(entry) : item))
-        : [summarise(entry), ...old]),
-  );
-  client.setQueryData<Quote[]>(quotesKey(userId, entry.id), (old) =>
+  await cancelReads(client, userId, entry.id, kind);
+  updateEntry(client, userId, kind, entry.id, entry);
+  client.setQueryData<Quote[]>(quotesKey(userId, entry.id, kind), (old) =>
     old
       ? [quote, ...old.filter((item) => item.id !== quote.id)]
       : entry.quotes[0]?.count === 1
@@ -73,13 +120,30 @@ export async function cacheSavedQuote(
       old ?? {
         quote_id: quote.id,
         user_book_id: entry.id,
+        entry_kind: kind,
+        entry_title: entryTitle(entry),
         text: quote.text,
-        author: entry.books.authors.join(', ') || 'Unknown author',
-        book_title: entry.books.title,
-        published_year: entry.books.published_date?.slice(0, 4) || '',
+        author:
+          quote.credit_mode === 'custom'
+            ? quote.credit_author || ''
+            : isCollection(entry)
+              ? ''
+              : entry.books.authors.join(', ') || 'Unknown author',
+        book_title:
+          quote.credit_mode === 'custom'
+            ? quote.credit_source || ''
+            : isCollection(entry)
+              ? ''
+              : entry.books.title,
+        published_year:
+          quote.credit_mode === 'custom'
+            ? quote.credit_year || ''
+            : isCollection(entry)
+              ? ''
+              : entry.books.published_date?.slice(0, 4) || '',
       },
   );
-  reconcile(client, userId, entry.id, entry.quotes[0]?.count || 0);
+  reconcile(client, userId, entry.id, kind, entry.quotes[0]?.count || 0);
 }
 export async function cacheEditedQuote(
   client: QueryClient,
@@ -87,15 +151,28 @@ export async function cacheEditedQuote(
   quote: Quote,
 ) {
   if (quote.user_id !== userId) throw new Error('Unexpected quote owner.');
+  const { kind, id } = quoteParent(quote);
   await client.cancelQueries({
-    queryKey: quotesKey(userId, quote.user_book_id),
+    queryKey: quotesKey(userId, id, kind),
     exact: true,
   });
-  client.setQueryData<Quote[]>(quotesKey(userId, quote.user_book_id), (old) =>
+  client.setQueryData<Quote[]>(quotesKey(userId, id, kind), (old) =>
     old?.map((item) => (item.id === quote.id ? quote : item)),
   );
   client.setQueryData<LibraryQuote | null>(heroKey(userId), (old) =>
-    old?.quote_id === quote.id ? { ...old, text: quote.text } : old,
+    old?.quote_id === quote.id
+      ? {
+          ...old,
+          text: quote.text,
+          ...(quote.credit_mode === 'custom'
+            ? {
+                author: quote.credit_author || '',
+                book_title: quote.credit_source || '',
+                published_year: quote.credit_year || '',
+              }
+            : {}),
+        }
+      : old,
   );
 }
 export async function cacheDeletedQuote(
@@ -104,27 +181,34 @@ export async function cacheDeletedQuote(
   quoteId: string,
   result: DeletedQuote,
 ) {
-  const id = result.user_book_id;
-  await cancelReads(client, userId, id);
-  client.setQueryData<Quote[]>(quotesKey(userId, id), (old) =>
+  const kind = result.collection_id ? 'collection' : 'book',
+    id = result.collection_id || result.user_book_id!;
+  await cancelReads(client, userId, id, kind);
+  client.setQueryData<Quote[]>(quotesKey(userId, id, kind), (old) =>
     old?.filter((quote) => quote.id !== quoteId),
   );
-  client.setQueryData<LibraryBook | null>(bookKey(userId, id), (old) =>
-    result.remaining_count === 0
-      ? null
-      : old
-        ? { ...old, quotes: [{ count: result.remaining_count }] }
-        : old,
+  const old = client.getQueryData<FullLibraryEntry | null>(
+    entryKey(userId, id, kind),
   );
-  client.setQueryData<LibrarySummary[]>(libraryKey(userId), (old) =>
-    old?.flatMap((item) =>
-      item.id !== id
-        ? [item]
-        : result.remaining_count === 0
-          ? []
-          : [{ ...item, quotes: [{ count: result.remaining_count }] }],
-    ),
-  );
+  if (old || result.remaining_count === 0)
+    updateEntry(
+      client,
+      userId,
+      kind,
+      id,
+      result.remaining_count === 0
+        ? null
+        : { ...old!, quotes: [{ count: result.remaining_count }] },
+    );
+  else
+    client.setQueryData<LibraryEntry[]>(libraryKey(userId), (entries) =>
+      entries?.map((entry) =>
+        entry.id === id &&
+        (isCollection(entry) ? 'collection' : 'book') === kind
+          ? { ...entry, quotes: [{ count: result.remaining_count }] }
+          : entry,
+      ),
+    );
   if (
     client.getQueryData<LibraryQuote | null>(heroKey(userId))?.quote_id ===
     quoteId
@@ -134,5 +218,78 @@ export async function cacheDeletedQuote(
       .invalidateQueries({ queryKey: heroKey(userId), exact: true })
       .catch(() => undefined);
   }
-  reconcile(client, userId, id, result.remaining_count);
+  reconcile(client, userId, id, kind, result.remaining_count);
+}
+export function cacheRenamedCollection(
+  client: QueryClient,
+  userId: string,
+  entry: FullLibraryEntry,
+) {
+  if (entry.user_id !== userId)
+    throw new Error('Collection ownership mismatch.');
+  updateEntry(client, userId, 'collection', entry.id, entry);
+  client.setQueryData<LibraryQuote | null>(heroKey(userId), (old) =>
+    old?.entry_kind === 'collection' && old.user_book_id === entry.id
+      ? { ...old, entry_title: entryTitle(entry) }
+      : old,
+  );
+}
+export async function cacheMovedQuote(
+  client: QueryClient,
+  userId: string,
+  result: MovedQuote,
+) {
+  if (
+    result.quote_record.user_id !== userId ||
+    result.destination_entry.user_id !== userId ||
+    (result.source_entry && result.source_entry.user_id !== userId)
+  )
+    throw new Error('Quote ownership mismatch.');
+  const target = result.destination_entry,
+    kind = isCollection(target) ? 'collection' : 'book';
+  await cancelReads(client, userId, result.source_id, result.source_kind);
+  await cancelReads(client, userId, target.id, kind);
+  updateEntry(
+    client,
+    userId,
+    result.source_kind,
+    result.source_id,
+    result.source_entry,
+  );
+  updateEntry(client, userId, kind, target.id, target);
+  client.setQueryData<Quote[]>(
+    quotesKey(userId, result.source_id, result.source_kind),
+    (old) => old?.filter((q) => q.id !== result.quote_record.id),
+  );
+  client.setQueryData<Quote[]>(quotesKey(userId, target.id, kind), (old) =>
+    old
+      ? [
+          ...old.filter((q) => q.id !== result.quote_record.id),
+          result.quote_record,
+        ].sort((a, b) => b.created_at.localeCompare(a.created_at))
+      : target.quotes[0]?.count === 1
+        ? [result.quote_record]
+        : undefined,
+  );
+  client.setQueryData<LibraryQuote | null>(heroKey(userId), (old) =>
+    old?.quote_id === result.quote_record.id
+      ? {
+          ...old,
+          user_book_id: target.id,
+          entry_kind: kind,
+          entry_title: entryTitle(target),
+          author: result.quote_record.credit_author || '',
+          book_title: result.quote_record.credit_source || '',
+          published_year: result.quote_record.credit_year || '',
+        }
+      : old,
+  );
+  reconcile(
+    client,
+    userId,
+    result.source_id,
+    result.source_kind,
+    result.source_remaining_count,
+  );
+  reconcile(client, userId, target.id, kind, target.quotes[0]?.count || 0);
 }

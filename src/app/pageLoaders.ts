@@ -5,3 +5,8 @@ export const loadLibraryPage = () =>
   }));
 export const loadBookPage = () =>
   import('../pages/BookPage').then((module) => ({ default: module.BookPage }));
+
+export const loadCollectionPage = () =>
+  import('../pages/CollectionPage').then((module) => ({
+    default: module.CollectionPage,
+  }));

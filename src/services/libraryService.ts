@@ -1,19 +1,33 @@
 import { db } from '../lib/supabase';
-import type { LibraryBook, LibrarySummary, Quote } from '../types';
-export const libraryProjection =
-  'id,user_id,book_id,created_at,books(id,source,source_id,title,authors,published_date,cover_url),quotes(count)';
+import type {
+  LibraryBook,
+  LibraryEntry,
+  CollectionEntry,
+  Quote,
+} from '../types';
 export async function getLibrary(
   signal?: AbortSignal,
-): Promise<LibrarySummary[]> {
-  const request = db()
-    .from('user_books')
-    .select(libraryProjection)
-    .order('created_at', { ascending: false });
+): Promise<LibraryEntry[]> {
+  const request = db().rpc('get_library_entries');
   const { data, error } = await (signal
     ? request.abortSignal(signal)
     : request);
   if (error) throw error;
-  return data as unknown as LibrarySummary[];
+  return data as unknown as LibraryEntry[];
+}
+export async function getCollection(
+  id: string,
+  signal?: AbortSignal,
+): Promise<CollectionEntry | null> {
+  const request = db()
+    .from('collections')
+    .select('*,quotes(count)')
+    .eq('id', id);
+  const { data, error } = await (
+    signal ? request.abortSignal(signal) : request
+  ).maybeSingle();
+  if (error) throw error;
+  return data ? { ...data, kind: 'collection' } : null;
 }
 export async function getBook(
   id: string,
@@ -32,17 +46,18 @@ export async function getBook(
 export async function getQuotes(
   id: string,
   signal?: AbortSignal,
+  kind: 'book' | 'collection' = 'book',
 ): Promise<Quote[]> {
   const request = db()
     .from('quotes')
     .select('*')
-    .eq('user_book_id', id)
+    .eq(kind === 'collection' ? 'collection_id' : 'user_book_id', id)
     .order('created_at', { ascending: false });
   const { data, error } = await (signal
     ? request.abortSignal(signal)
     : request);
   if (error) throw error;
-  return data;
+  return data as unknown as Quote[];
 }
 export async function getProfile(id: string) {
   const { data, error } = await db()

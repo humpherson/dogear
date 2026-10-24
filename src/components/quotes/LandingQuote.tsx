@@ -41,11 +41,15 @@ export function LandingQuote() {
         <>
           <blockquote>{query.data.text}</blockquote>
           <div className="rule" />
-          <p>{query.data.author}</p>
-          <span className="muted">
-            {query.data.book_title}
-            {query.data.published_year ? ` · ${query.data.published_year}` : ''}
-          </span>
+          {query.data.author && <p>{query.data.author}</p>}
+          {(query.data.book_title || query.data.published_year) && (
+            <span className="muted">
+              {query.data.book_title}
+              {query.data.published_year
+                ? ` · ${query.data.published_year}`
+                : ''}
+            </span>
+          )}
         </>
       ) : (
         <p>A little quip will be here soon.</p>

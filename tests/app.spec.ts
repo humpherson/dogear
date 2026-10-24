@@ -210,7 +210,7 @@ test('landing, private-route refresh, callback errors, and accessibility', async
   const matching = pool.data!.find((row) => row.text === text);
   expect(matching).toBeTruthy();
   await expect(page.locator('.literary-card')).toContainText(
-    matching!.user_books.books.title,
+    matching!.user_books?.books.title || payload[0].book_title || '',
   );
   await expect(page.locator('.literary-card')).not.toContainText(
     'A note only the owner should read.',
@@ -306,14 +306,14 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="46" height="68"><rect width="46" height="68" fill="tan"/></svg>',
     }),
   );
+  await page.route('**/rest/v1/rpc/get_library_entries', async (route) => {
+    reads.library++;
+    await (blockBackground ? backgroundGate : libraryGate);
+    await route.continue().catch(() => undefined);
+  });
   await page.route('**/rest/v1/user_books?*', async (route) => {
-    const isDetails = new URL(route.request().url()).searchParams.has('id');
-    reads[isDetails ? 'details' : 'library']++;
-    await (blockBackground
-      ? backgroundGate
-      : isDetails
-        ? detailsGate
-        : libraryGate);
+    reads.details++;
+    await (blockBackground ? backgroundGate : detailsGate);
     await route.continue().catch(() => undefined);
   });
   await page.route('**/rest/v1/quotes?*', async (route) => {
@@ -323,19 +323,20 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
     }
     await route.continue().catch(() => undefined);
   });
-  await page.route('**/rest/v1/rpc/get_random_library_quote', async (route) => {
-    reads.hero++;
-    await (blockBackground ? backgroundGate : heroGate);
-    await route.continue().catch(() => undefined);
-  });
+  await page.route(
+    '**/rest/v1/rpc/get_random_library_entry_quote',
+    async (route) => {
+      reads.hero++;
+      await (blockBackground ? backgroundGate : heroGate);
+      await route.continue().catch(() => undefined);
+    },
+  );
   try {
     await page.reload();
     await expect.poll(() => reads.library).toBe(1);
     await expect.poll(() => reads.hero).toBe(1);
-    const response = page.waitForResponse(
-      (value) =>
-        value.url().includes('/rest/v1/user_books?') &&
-        !new URL(value.url()).searchParams.has('id'),
+    const response = page.waitForResponse((value) =>
+      value.url().endsWith('/rest/v1/rpc/get_library_entries'),
     );
     releaseHero();
     releaseLibrary();
@@ -542,6 +543,11 @@ test('Add quote opens without waiting for more page code or a fresh library requ
   });
   let libraryReads = 0;
   const extraScripts: string[] = [];
+  await page.route('**/rest/v1/rpc/get_library_entries', async (route) => {
+    libraryReads++;
+    await gate;
+    await route.continue().catch(() => undefined);
+  });
   await page.route('**/assets/*.js', async (route) => {
     extraScripts.push(route.request().url());
     await gate;
@@ -839,4 +845,333 @@ test('switching accounts in the same browser clears private library data', async
   await expect(
     page.getByRole('heading', { name: 'A private collection' }),
   ).toHaveCount(0);
+});
+
+test('creates, reuses, renames and moves personal collections without book searches', async ({
+  page,
+}) => {
+  await signup(page);
+  let bookRequests = 0;
+  await page.route('https://openlibrary.org/**', (route) => {
+    bookRequests++;
+    return route.abort();
+  });
+  await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Create a collection', exact: true })
+    .click();
+  await page.getByLabel('Collection name').fill('Passing thoughts');
+  const backgroundChoices = page.getByRole('group', {
+    name: 'Background colour',
+    exact: true,
+  });
+  await expect(backgroundChoices.getByRole('radio')).toHaveCount(0);
+  await backgroundChoices.getByRole('button').click();
+  await expect(backgroundChoices.getByRole('radio')).toHaveCount(12);
+  await page.keyboard.press('Escape');
+  await expect(backgroundChoices.getByRole('button')).toBeFocused();
+  await expect(backgroundChoices.getByRole('radio')).toHaveCount(0);
+  await backgroundChoices.getByRole('button').click();
+  await page.screenshot({
+    path: `test-results/colour-dropdown-${page.viewportSize()!.width}.png`,
+    fullPage: true,
+  });
+  await expect(page.locator('input[type=color]')).toHaveCount(0);
+  const swatchSize = await backgroundChoices
+    .locator('.colour-swatch')
+    .first()
+    .boundingBox();
+  expect(swatchSize!.width).toBeGreaterThanOrEqual(44);
+  expect(swatchSize!.height).toBeGreaterThanOrEqual(44);
+  await page.getByLabel('Collection name').click();
+  await expect(backgroundChoices.getByRole('radio')).toHaveCount(0);
+  await page
+    .getByRole('group', { name: 'Background colour', exact: true })
+    .getByRole('button')
+    .click();
+  await page
+    .getByRole('group', { name: 'Background colour', exact: true })
+    .getByRole('radio', { name: 'Sage', exact: true })
+    .check();
+  await page
+    .getByRole('group', { name: 'Icon colour', exact: true })
+    .getByRole('button')
+    .click();
+  await page
+    .getByRole('group', { name: 'Icon colour', exact: true })
+    .getByRole('radio', { name: 'Forest', exact: true })
+    .check();
+  await page
+    .getByRole('group', { name: 'Text colour', exact: true })
+    .getByRole('button')
+    .click();
+  await page
+    .getByRole('group', { name: 'Text colour', exact: true })
+    .getByRole('radio', { name: 'Forest', exact: true })
+    .check();
+  await page
+    .getByRole('group', { name: 'Border colour', exact: true })
+    .getByRole('button')
+    .click();
+  await page
+    .getByRole('group', { name: 'Border colour', exact: true })
+    .getByRole('radio', { name: 'Moss', exact: true })
+    .check();
+  await page.getByRole('button', { name: 'Use this collection' }).click();
+  await page
+    .getByLabel('The words you want to keep')
+    .fill('A small observation worth keeping.');
+  await page.getByLabel('Author or speaker').fill('A friend');
+  await page.getByLabel('Source', { exact: false }).fill('A conversation');
+  await page.getByLabel('Reference').fill('Yesterday');
+  await page.getByLabel('A note to yourself').fill('A private reminder');
+  await page.getByRole('button', { name: 'Keep this quote' }).click();
+  await expect(page).toHaveURL(/#\/collections\//);
+  await expect(page.locator('.collection-cover')).toHaveCSS(
+    'background-color',
+    'rgb(212, 228, 208)',
+  );
+  await expect(page.locator('.collection-cover > span')).toHaveText(
+    'Passing thoughts',
+  );
+  await expect(page.locator('.quote-credit')).toContainText('A friend');
+  await checkA11y(page);
+  await page.screenshot({
+    path: `test-results/collection-${page.viewportSize()!.width}.png`,
+    fullPage: true,
+  });
+  await page.getByRole('button', { name: 'Edit collection' }).click();
+  let dialog = page.getByRole('alertdialog');
+  await dialog.getByLabel('Collection name').fill('Little observations');
+  await dialog
+    .getByRole('group', { name: 'Background colour', exact: true })
+    .getByRole('button')
+    .click();
+  await dialog
+    .getByRole('group', { name: 'Background colour', exact: true })
+    .getByRole('radio', { name: 'Sand', exact: true })
+    .check();
+  await dialog
+    .getByRole('group', { name: 'Border colour', exact: true })
+    .getByRole('button')
+    .click();
+  await dialog
+    .getByRole('group', { name: 'Border colour', exact: true })
+    .getByRole('radio', { name: 'Gold', exact: true })
+    .check();
+  await dialog
+    .getByRole('group', { name: 'Icon colour', exact: true })
+    .getByRole('button')
+    .click();
+  await dialog
+    .getByRole('group', { name: 'Icon colour', exact: true })
+    .getByRole('radio', { name: 'Clay', exact: true })
+    .check();
+  await dialog
+    .getByRole('group', { name: 'Text colour', exact: true })
+    .getByRole('button')
+    .click();
+  await dialog
+    .getByRole('group', { name: 'Text colour', exact: true })
+    .getByRole('radio', { name: 'Ink', exact: true })
+    .check();
+  await dialog.getByRole('button', { name: 'Save collection' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Little observations', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+  await page
+    .getByRole('button', { name: /Choose Little observations/ })
+    .click();
+  await page
+    .getByLabel('The words you want to keep')
+    .fill('An original line with no attribution.');
+  await page.getByRole('button', { name: 'Keep this quote' }).click();
+  await expect(page.locator('.quote-card')).toHaveCount(2);
+  const first = page
+    .locator('.quote-card')
+    .filter({ hasText: 'A small observation worth keeping.' });
+  await first.getByRole('button', { name: 'Move', exact: true }).click();
+  dialog = page.getByRole('alertdialog');
+  await expect(dialog.getByLabel('Author or speaker')).toHaveValue('A friend');
+  await dialog.getByLabel('Destination').selectOption('new');
+  await dialog.getByLabel('New collection name').fill('Conversations');
+  await checkA11y(page);
+  await page.screenshot({
+    path: `test-results/move-${page.viewportSize()!.width}.png`,
+    fullPage: true,
+  });
+  await dialog.getByRole('button', { name: 'Move quote', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Conversations', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.quote-card')).toContainText('A private reminder');
+  await expect(page.locator('.quote-credit')).toContainText('A conversation');
+  await page
+    .locator('.quote-card')
+    .getByRole('button', { name: 'Move', exact: true })
+    .click();
+  dialog = page.getByRole('alertdialog');
+  await dialog
+    .getByLabel('Destination')
+    .selectOption({ label: 'Little observations — Collection' });
+  await dialog.getByLabel('Author or speaker').fill('');
+  await dialog.getByLabel('Source', { exact: false }).fill('');
+  await dialog.getByRole('button', { name: 'Move quote', exact: true }).click();
+  await expect(page.locator('.quote-card')).toHaveCount(2);
+  await expect(page.locator('.quote-credit')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.collection-cover')).toHaveCSS(
+    'background-color',
+    'rgb(238, 224, 208)',
+  );
+  await expect(page.locator('.collection-cover')).toHaveCSS(
+    'color',
+    'rgb(52, 42, 32)',
+  );
+  await expect(page.locator('.collection-cover')).toHaveCSS(
+    'border-left-color',
+    'rgb(150, 113, 61)',
+  );
+  await expect(page.locator('.collection-cover svg')).toHaveCSS(
+    'color',
+    'rgb(184, 119, 94)',
+  );
+  await expect(page.locator('.collection-cover > span')).toHaveText(
+    'Little observations',
+  );
+  await expect(page.locator('.quote-card')).toHaveCount(2);
+  await checkA11y(page);
+  await page
+    .getByRole('link', { name: 'Library', exact: true })
+    .first()
+    .click();
+  await expect(page.locator('.book-card')).toHaveCount(1);
+  await expect(page.locator('.book-card')).toContainText('Little observations');
+  await page.locator('.book-card').click();
+  await page.getByRole('button', { name: 'Edit collection' }).click();
+  dialog = page.getByRole('alertdialog');
+  const longName =
+    'Little observations and other memorable words gathered from everyday conversations';
+  await dialog.getByLabel('Collection name').fill(longName);
+  await dialog.getByRole('button', { name: 'Save collection' }).click();
+  await expect(dialog).not.toBeVisible();
+  const thumbnailName = page.locator('.collection-cover > span');
+  await expect(thumbnailName).toHaveText(longName);
+  expect(
+    await thumbnailName.evaluate((node) => node.scrollWidth > node.clientWidth),
+  ).toBe(true);
+  await expect(
+    page.getByRole('heading', { name: longName, exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: `test-results/collection-colours-${page.viewportSize()!.width}.png`,
+    fullPage: true,
+  });
+  expect(bookRequests).toBe(0);
+});
+
+test('moving between books and collections retains original attribution and quote identity', async ({
+  page,
+}) => {
+  const email = await signup(page);
+  const owner = createClient<Database>(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  expect(
+    (
+      await owner.auth.signInWithPassword({
+        email,
+        password: 'Reading-words-123',
+      })
+    ).error,
+  ).toBeNull();
+  const ids = [`OL${Date.now()}91W`, `OL${Date.now()}92W`];
+  fixtureSources.push(...ids);
+  const saved = await owner.rpc('save_quote_with_book_result', {
+    book: {
+      source: 'open_library',
+      source_id: ids[0],
+      title: 'Original source',
+      authors: ['Original writer'],
+      published_date: '1994',
+    },
+    quote: {
+      text: 'The original words.',
+      note: 'A private detail',
+      page_number: '42',
+    },
+  });
+  const other = await owner.rpc('save_quote_with_book_result', {
+    book: {
+      source: 'open_library',
+      source_id: ids[1],
+      title: 'Another book',
+      authors: ['Another writer'],
+    },
+    quote: { text: 'Already in the destination.' },
+  });
+  expect(saved.error).toBeNull();
+  expect(other.error).toBeNull();
+  const original = saved.data![0].quote_record as {
+    id: string;
+    created_at: string;
+  };
+  const association = saved.data![0].library_entry as { id: string };
+  await page.goto(`#/books/${association.id}`);
+  await page
+    .locator('.quote-card')
+    .getByRole('button', { name: 'Move', exact: true })
+    .click();
+  let dialog = page.getByRole('alertdialog');
+  await expect(dialog.getByLabel('Author or speaker')).toHaveValue(
+    'Original writer',
+  );
+  await expect(dialog.getByLabel('Source', { exact: false })).toHaveValue(
+    'Original source',
+  );
+  await dialog.getByLabel('Destination').selectOption('new');
+  await dialog.getByLabel('New collection name').fill('Collected lines');
+  await dialog.getByRole('button', { name: 'Move quote', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Collected lines', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.quote-credit')).toContainText('Original source');
+  await page
+    .locator('.quote-card')
+    .getByRole('button', { name: 'Move', exact: true })
+    .click();
+  dialog = page.getByRole('alertdialog');
+  await dialog
+    .getByLabel('Destination')
+    .selectOption({ label: 'Another book — Book' });
+  await dialog.getByRole('button', { name: 'Move quote', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Another book', exact: true }),
+  ).toBeVisible();
+  const moved = page
+    .locator('.quote-card')
+    .filter({ hasText: 'The original words.' });
+  await expect(moved.locator('.quote-credit')).toContainText('Original writer');
+  await expect(moved.locator('.quote-credit')).toContainText('Original source');
+  await expect(moved).toContainText('A private detail');
+  const record = await owner
+    .from('quotes')
+    .select('*')
+    .eq('id', original.id)
+    .single();
+  expect(record.error).toBeNull();
+  expect(record.data).toMatchObject({
+    id: original.id,
+    created_at: original.created_at,
+    credit_year: '1994',
+    page_number: '42',
+    note: 'A private detail',
+  });
+  await page
+    .getByRole('link', { name: 'Library', exact: true })
+    .first()
+    .click();
+  await expect(page.locator('.book-card')).toHaveCount(1);
+  await expect(page.locator('.book-card')).toContainText('Another book');
 });

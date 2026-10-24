@@ -1,13 +1,40 @@
 import { queryOptions, type QueryClient } from '@tanstack/react-query';
-import { getBook, getLibrary, getQuotes } from '../../services/libraryService';
+import {
+  getBook,
+  getLibrary,
+  getQuotes,
+  getCollection,
+} from '../../services/libraryService';
 import { getRandomLibraryQuote } from '../../services/libraryQuotesService';
-import type { LibraryBook, LibrarySummary } from '../../types';
+import {
+  type LibraryBook,
+  type LibraryEntry,
+  type CollectionEntry,
+  type EntryKind,
+  isCollection,
+} from '../../types';
 export const libraryKey = (userId: string | undefined) =>
   ['private', userId, 'library'] as const;
 export const bookKey = (userId: string | undefined, id: string) =>
   ['private', userId, 'book', id] as const;
-export const quotesKey = (userId: string | undefined, id: string) =>
-  ['private', userId, 'quotes', id] as const;
+export const quotesKey = (
+  userId: string | undefined,
+  id: string,
+  kind: EntryKind = 'book',
+) =>
+  [
+    'private',
+    userId,
+    kind === 'book' ? 'quotes' : 'collection-quotes',
+    id,
+  ] as const;
+export const collectionKey = (userId: string | undefined, id: string) =>
+  ['private', userId, 'collection', id] as const;
+export const entryKey = (
+  userId: string | undefined,
+  id: string,
+  kind: EntryKind,
+) => (kind === 'book' ? bookKey(userId, id) : collectionKey(userId, id));
 export const heroKey = (userId: string | undefined) =>
   ['private', userId, 'library-hero'] as const;
 export function libraryQueryOptions(userId: string | undefined) {
@@ -26,10 +53,14 @@ export function bookQueryOptions(userId: string | undefined, id: string) {
     staleTime: 60_000,
   });
 }
-export function quotesQueryOptions(userId: string | undefined, id: string) {
+export function quotesQueryOptions(
+  userId: string | undefined,
+  id: string,
+  kind: EntryKind = 'book',
+) {
   return queryOptions({
-    queryKey: quotesKey(userId, id),
-    queryFn: ({ signal }) => getQuotes(id, signal),
+    queryKey: quotesKey(userId, id, kind),
+    queryFn: ({ signal }) => getQuotes(id, signal, kind),
     enabled: !!userId && !!id,
     staleTime: 30_000,
   });
@@ -51,8 +82,33 @@ export function cachedBook(
 ) {
   return (
     client.getQueryData<LibraryBook | null>(bookKey(userId, id)) ??
+    (client
+      .getQueryData<LibraryEntry[]>(libraryKey(userId))
+      ?.find((entry) => !isCollection(entry) && entry.id === id) as
+      LibraryBook | undefined)
+  );
+}
+
+export function collectionQueryOptions(userId: string | undefined, id: string) {
+  return queryOptions({
+    queryKey: collectionKey(userId, id),
+    queryFn: ({ signal }) => getCollection(id, signal),
+    enabled: !!userId && !!id,
+    staleTime: 60000,
+  });
+}
+export function cachedCollection(
+  client: QueryClient,
+  userId: string | undefined,
+  id: string,
+) {
+  return (
+    client.getQueryData<CollectionEntry | null>(collectionKey(userId, id)) ??
     client
-      .getQueryData<LibrarySummary[]>(libraryKey(userId))
-      ?.find((entry) => entry.id === id)
+      .getQueryData<LibraryEntry[]>(libraryKey(userId))
+      ?.find(
+        (entry): entry is CollectionEntry =>
+          isCollection(entry) && entry.id === id,
+      )
   );
 }

@@ -98,6 +98,7 @@ export function BookPage() {
           <QuoteCard
             key={quote.id}
             quote={quote}
+            book={entry.books}
             onDeleted={(remaining) => {
               if (remaining === 0) navigate('/library', { replace: true });
             }}

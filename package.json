@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest",
-    "test:db": "node --env-file-if-exists=.env.local scripts/database-test.mjs",
+    "test:db": "node --env-file-if-exists=.env.local scripts/database-test.mjs && node --env-file-if-exists=.env.local scripts/collections-database-test.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

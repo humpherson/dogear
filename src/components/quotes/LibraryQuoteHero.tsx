@@ -39,10 +39,18 @@ export function LibraryQuoteHero({ quoteCount }: { quoteCount: number }) {
       {query.data ? (
         <>
           <blockquote aria-live="polite">{query.data.text}</blockquote>
-          <p className="library-quote-author">{query.data.author}</p>
+          {query.data.author && (
+            <p className="library-quote-author">{query.data.author}</p>
+          )}
           <p className="library-quote-book">
-            <Link to={`/books/${query.data.user_book_id}`}>
-              {query.data.book_title}
+            {query.data.entry_kind === 'collection' &&
+              query.data.book_title && <span>{query.data.book_title} · </span>}
+            <Link
+              to={`/${query.data.entry_kind === 'collection' ? 'collections' : 'books'}/${query.data.user_book_id}`}
+            >
+              {query.data.entry_kind === 'collection'
+                ? query.data.entry_title
+                : query.data.book_title}
             </Link>
             {query.data.published_year ? ` · ${query.data.published_year}` : ''}
           </p>

@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { quoteSchema, type QuoteInput } from '../../lib/validation';
 export function QuoteForm({
+  collection = false,
+  showCredits = collection,
   initial,
   onSubmit,
   pending,
@@ -12,6 +14,8 @@ export function QuoteForm({
   disabled = false,
   pendingLabel = 'Saving…',
 }: {
+  collection?: boolean;
+  showCredits?: boolean;
   initial?: QuoteInput;
   onSubmit: (data: QuoteInput) => void;
   pending: boolean;
@@ -27,7 +31,13 @@ export function QuoteForm({
     formState: { errors },
   } = useForm<QuoteInput>({
     resolver: zodResolver(quoteSchema),
-    defaultValues: initial || { text: '', page_number: '', note: '' },
+    defaultValues: {
+      text: '',
+      page_number: '',
+      note: '',
+      ...(showCredits ? { credit_author: '', credit_source: '' } : {}),
+      ...initial,
+    },
   });
   return (
     <form
@@ -47,8 +57,40 @@ export function QuoteForm({
       <p id={`${id}-quote-text-error`} className="field-error">
         {errors.text?.message}
       </p>
+      {showCredits && (
+        <>
+          <label htmlFor={`${id}-author`}>
+            Author or speaker <span className="muted">(optional)</span>
+          </label>
+          <input
+            id={`${id}-author`}
+            {...register('credit_author')}
+            maxLength={10000}
+            aria-invalid={!!errors.credit_author}
+            aria-describedby={`${id}-author-error`}
+          />
+          <p className="field-error" id={`${id}-author-error`}>
+            {errors.credit_author?.message}
+          </p>
+          <label htmlFor={`${id}-source`}>
+            Source <span className="muted">(optional)</span>
+          </label>
+          <input
+            id={`${id}-source`}
+            {...register('credit_source')}
+            maxLength={1000}
+            placeholder="e.g. a song title or conversation"
+            aria-invalid={!!errors.credit_source}
+            aria-describedby={`${id}-source-error`}
+          />
+          <p className="field-error" id={`${id}-source-error`}>
+            {errors.credit_source?.message}
+          </p>
+        </>
+      )}
       <label htmlFor={`${id}-page-number`}>
-        Page or location <span className="muted">(optional)</span>
+        {collection ? 'Reference' : 'Page or location'}{' '}
+        <span className="muted">(optional)</span>
       </label>
       <input
         id={`${id}-page-number`}
@@ -79,8 +121,8 @@ export function QuoteForm({
         </p>
       )}
       <p id={`${id}-visibility`} className="hint">
-        Quote text and book attribution may appear on the public homepage. Your
-        notes and account details stay private.
+        Quote text and author/source credits may appear on the public homepage.
+        Collection names, notes, references and account details stay private.
       </p>
       <div className="actions">
         <button

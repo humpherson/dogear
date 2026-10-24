@@ -459,7 +459,8 @@ main:has(> .library-page) {
   justify-content: center;
   border-radius: 5px;
 }
-.cover {
+.cover,
+.collection-cover {
   width: 38px;
   height: 54px;
   flex-shrink: 0;
@@ -467,7 +468,8 @@ main:has(> .library-page) {
   box-shadow: 2px 3px 5px #0002;
   border-radius: 2px;
 }
-.cover.large {
+.cover.large,
+.collection-cover.large {
   width: 130px;
   height: 190px;
 }
@@ -886,7 +888,8 @@ hr {
     font-size: 1.2rem;
     overflow-wrap: anywhere;
   }
-  .book-stage .cover.large {
+  .book-stage .cover.large,
+  .book-stage .collection-cover.large {
     width: 100px;
     height: 150px;
   }
@@ -897,7 +900,8 @@ hr {
   .book-details {
     gap: 20px;
   }
-  .book-details .cover.large {
+  .book-details .cover.large,
+  .book-details .collection-cover.large {
     width: 95px;
     height: 140px;
   }
@@ -964,4 +968,189 @@ hr {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.collection-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  background: #f5f0e6;
+  border: 1px solid #c5a477;
+  border-left: 5px solid #96713d;
+  color: var(--color-forest);
+  border-radius: 3px 7px 7px 3px;
+}
+.collection-cover > span {
+  display: none;
+}
+.collection-cover.large > span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+}
+.quote-credit {
+  color: var(--color-forest);
+  font-size: 0.85rem;
+  margin: 15px 0;
+}
+select {
+  font: inherit;
+  width: 100%;
+  padding: 12px;
+  background: #fffdf7;
+  border: 1px solid #b8b9aa;
+  border-radius: 5px;
+  color: var(--color-ink);
+}
+select:focus-visible {
+  outline: 3px solid #96713d;
+  outline-offset: 3px;
+}
+.dialog {
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+@media (max-width: 760px) {
+  .collection-cover.large > span {
+    font-size: 0.55rem;
+  }
+  .quote-meta .actions {
+    flex-wrap: wrap;
+  }
+}
+
+.collection-colours,
+.colour-choice {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.collection-colours {
+  margin: 20px 0;
+  display: grid;
+  gap: 20px;
+}
+.collection-colours > legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.colour-choice {
+  margin: 0;
+}
+.colour-choice legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.colour-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 44px);
+  gap: 8px;
+}
+.colour-swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+.colour-swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.colour-swatch-fill {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #68685d;
+  pointer-events: none;
+}
+.colour-swatch:has(input:checked) {
+  border-color: var(--color-forest);
+}
+.colour-swatch:has(input:focus-visible) {
+  outline: 3px solid #96713d;
+  outline-offset: 3px;
+}
+.colour-swatch-check {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  background: #fffdf7;
+  color: #203b35;
+  border: 1px solid #203b35;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+.colour-swatch:has(input:checked) .colour-swatch-check {
+  display: block;
+}
+.colour-swatch:has(input:disabled) {
+  opacity: 0.55;
+  cursor: default;
+}
+@media (max-width: 400px) {
+  .colour-swatches {
+    grid-template-columns: repeat(4, 44px);
+  }
+}
+
+.colour-dropdown-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  background: #fffdf7;
+  color: var(--color-ink);
+  border: 1px solid #b8b9aa;
+  border-radius: 5px;
+  font-weight: 400;
+}
+.colour-dropdown-trigger:hover {
+  background: #f5f0e6;
+}
+.colour-dropdown-trigger > svg {
+  margin-left: auto;
+}
+.colour-dropdown-trigger[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+.colour-dropdown-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #68685d;
+  flex-shrink: 0;
+}
+.colour-dropdown-panel {
+  padding: 12px 8px;
+  margin-top: 6px;
+  border: 1px solid #dedbce;
+  border-radius: 5px;
+  background: #fffdf7;
 }

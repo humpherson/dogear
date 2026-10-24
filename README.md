@@ -160,3 +160,15 @@ Hosted migrations are intentionally separate from frontend deployment. Apply com
 ## Verification status
 
 See `VERIFICATION.md` for the commands actually run, outcomes, and outstanding hosted checks. Local integration passing does not establish hosted SMTP, deployed-domain callbacks, or GitHub Actions execution.
+
+## Collections
+
+Choose **Create a collection** on Add quote to keep words without a book. A collection is created atomically with its first quote; merely choosing a name does not save anything. Existing collections appear alongside books in the library and saved-entry picker. Names are private, trimmed, limited to 120 characters and unique per user without regard to case. Rename them from their detail page.
+
+Collection quotes have optional **Author or speaker** and **Source** credits. Leaving these blank does not infer the user's identity. Quote text and credits can appear on the public homepage; collection names, notes, references and account details remain private. The public RPC retains its four-field response; `book_title` is also the legacy field name for a custom source.
+
+Use **Move** on a quote to select an existing book or collection, or create a collection. Review/edit the credits before confirming. Moves preserve quote identity, creation date, text, note and reference. Original book attribution is retained even when moving into another book. Changing the source clears its publication year. Moving or deleting the final quote removes the empty library entry; immutable book catalogue records remain.
+
+Apply `supabase/migrations/202610240007_collections.sql` before deploying this frontend. For hosted Supabase, review pending changes with `npx supabase db push --dry-run`, then apply with `npx supabase db push`. Local development uses `npx supabase migration up --local`; no reset is required. `npm run test:db` includes book compatibility, collection ownership, concurrency, credit preservation and public projection checks.
+
+Collection thumbnails show their names, with long names truncated to fit. Creation and **Edit collection** offer compact dropdowns containing 12 coordinated colour swatches for each of the background, icon, text and border, with a preview. Existing collections retain the paper/forest/gold defaults until changed. Colour choices belong to the private collection and never enter public quote attribution. Apply `202610240008_collection_colours.sql` before deploying the colour controls; it keeps previous collection RPCs compatible and validates six-digit hex colours in atomic save/edit/move wrappers.

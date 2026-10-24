@@ -3,31 +3,46 @@ import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { libraryQueryOptions } from '../../features/library/libraryQuery';
-import { message } from '../../lib/validation';
-import type { SelectedBook } from '../../types';
+import { message, collectionNameSchema } from '../../lib/validation';
+import {
+  type SelectedBook,
+  type CollectionEntry,
+  type CollectionDraft,
+  type CollectionAppearance,
+  isCollection,
+} from '../../types';
 import { Cover } from './BookDetails';
+import { CollectionAppearanceFields } from '../collections/CollectionAppearanceFields';
+import { CollectionCover } from '../collections/CollectionDetails';
 import { BookSearch } from './BookSearch';
 import { Accordion } from '../ui/Accordion';
-
 export function BookPicker({
   onSelect,
+  onSelectCollection,
 }: {
   onSelect: (book: SelectedBook, userBookId?: string) => void;
+  onSelectCollection?: (collection: CollectionEntry | CollectionDraft) => void;
 }) {
   const { session } = useAuth();
-  const [filter, setFilter] = useState('');
-  const [chosenSection, setChosenSection] = useState<string | null>(null);
-  const id = useId();
-  const library = useQuery(libraryQueryOptions(session?.user.id));
+  const [filter, setFilter] = useState(''),
+    [chosenSection, setChosenSection] = useState<string | null>(null),
+    [name, setName] = useState(''),
+    [nameError, setNameError] = useState('');
+  const id = useId(),
+    library = useQuery(libraryQueryOptions(session?.user.id));
   const activeSection =
     chosenSection ?? (library.data?.length ? 'library' : 'new');
   const term = filter.trim().toLocaleLowerCase();
   const matches =
-    library.data?.filter(({ books }) =>
-      `${books.title} ${books.authors.join(' ')}`
+    library.data?.filter((entry) =>
+      (isCollection(entry)
+        ? entry.name
+        : `${entry.books.title} ${entry.books.authors.join(' ')}`
+      )
         .toLocaleLowerCase()
         .includes(term),
     ) || [];
+  const [appearance, setAppearance] = useState<CollectionAppearance>({});
   return (
     <div className="book-picker">
       {activeSection === 'new' && library.isPending && (
@@ -35,7 +50,8 @@ export function BookPicker({
       )}
       {activeSection === 'new' && library.isError && (
         <p role="status" className="hint">
-          Your library couldn’t be loaded. You can still find a new book.
+          Your library couldn’t be loaded. You can still find a new book or
+          create a collection.
         </p>
       )}
       <Accordion
@@ -48,7 +64,8 @@ export function BookPicker({
             content: (
               <>
                 <p className="muted">
-                  Keep another passage from a book you’ve already saved.
+                  Keep another passage in a book or collection you’ve already
+                  saved.
                 </p>
                 {library.isPending ? (
                   <LoadingIndicator>Loading your books…</LoadingIndicator>
@@ -65,8 +82,8 @@ export function BookPicker({
                   </div>
                 ) : !library.data.length ? (
                   <p className="hint">
-                    No books in your library yet. Open Find a new book to start
-                    your collection.
+                    Your library is empty. Find a new book or create a
+                    collection to begin.
                   </p>
                 ) : (
                   <>
@@ -76,29 +93,45 @@ export function BookPicker({
                       type="search"
                       value={filter}
                       onChange={(event) => setFilter(event.target.value)}
-                      placeholder="Title or author…"
+                      placeholder="Title, author or collection…"
                     />
                     {matches.length ? (
                       <ul
                         className="library-picker-list"
-                        aria-label="Books in your library"
+                        aria-label="Books and collections in your library"
                       >
                         {matches.map((entry) => (
-                          <li key={entry.id}>
+                          <li
+                            key={`${isCollection(entry) ? 'collection' : 'book'}-${entry.id}`}
+                          >
                             <button
                               type="button"
                               className="library-book-choice"
-                              onClick={() => onSelect(entry.books, entry.id)}
+                              onClick={() =>
+                                isCollection(entry)
+                                  ? onSelectCollection?.(entry)
+                                  : onSelect(entry.books, entry.id)
+                              }
                             >
                               <span className="sr-only">Choose</span>{' '}
                               <span aria-hidden="true">
-                                <Cover book={entry.books} />
+                                {isCollection(entry) ? (
+                                  <CollectionCover {...entry} />
+                                ) : (
+                                  <Cover book={entry.books} />
+                                )}
                               </span>
                               <span className="library-book-label">
-                                <strong>{entry.books.title}</strong>{' '}
+                                <strong>
+                                  {isCollection(entry)
+                                    ? entry.name
+                                    : entry.books.title}
+                                </strong>{' '}
                                 <span>
-                                  {entry.books.authors.join(', ') ||
-                                    'Unknown author'}
+                                  {isCollection(entry)
+                                    ? 'Collection'
+                                    : entry.books.authors.join(', ') ||
+                                      'Unknown author'}
                                 </span>{' '}
                                 <span className="muted">
                                   {entry.quotes[0]?.count || 0}{' '}
@@ -114,8 +147,9 @@ export function BookPicker({
                       </ul>
                     ) : (
                       <p role="status" className="hint">
-                        No saved books match “{filter}”. Try another title or
-                        author, or open Find a new book.
+                        No saved books or collections match “{filter}”. Try
+                        another title or author, find a new book, or create a
+                        collection.
                       </p>
                     )}
                   </>
@@ -127,6 +161,52 @@ export function BookPicker({
             value: 'new',
             title: 'Find a new book',
             content: <BookSearch onSelect={onSelect} />,
+          },
+          {
+            value: 'collection',
+            title: 'Create a collection',
+            content: (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const parsed = collectionNameSchema.safeParse(name);
+                  if (!parsed.success) {
+                    setNameError(parsed.error.issues[0].message);
+                    return;
+                  }
+                  setNameError('');
+                  onSelectCollection?.({ name: parsed.data, ...appearance });
+                }}
+              >
+                <p className="muted">
+                  Keep original thoughts, lyrics and lines from anywhere. Your
+                  collection appears when you save its first quote.
+                </p>
+                <label htmlFor={`${id}-collection`}>Collection name</label>
+                <input
+                  id={`${id}-collection`}
+                  value={name}
+                  maxLength={120}
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    setNameError('');
+                  }}
+                  aria-invalid={!!nameError}
+                  aria-describedby={nameError ? `${id}-name-error` : undefined}
+                  placeholder="e.g. Lines that stay with me"
+                />
+                {nameError && (
+                  <p role="alert" id={`${id}-name-error`}>
+                    {nameError}
+                  </p>
+                )}
+                <CollectionAppearanceFields
+                  value={appearance}
+                  onChange={setAppearance}
+                />
+                <button type="submit">Use this collection</button>
+              </form>
+            ),
           },
         ]}
       />

@@ -43,19 +43,14 @@ it('propagates save and delete failures', async () => {
   ).rejects.toThrow('Offline');
   await expect(deleteQuote('q')).rejects.toThrow('Offline');
 });
-it('updates only editable quote fields', async () => {
-  const single = vi.fn().mockResolvedValue({ data: { id: 'q' }, error: null });
-  const select = vi.fn(() => ({ single }));
-  const eq = vi.fn(() => ({ select }));
-  const update = vi.fn(() => ({ eq }));
-  from.mockReturnValue({ update });
+it('edits through the owned quote RPC and returns its canonical result', async () => {
+  rpc.mockResolvedValue({ data: savedFixture(book).quote_record, error: null });
   await editQuote('q', { text: ' Edited ', note: '', page_number: '' });
-  expect(update).toHaveBeenCalledWith({
-    text: 'Edited',
-    note: null,
-    page_number: null,
+  expect(rpc).toHaveBeenCalledWith('edit_library_quote', {
+    quote_id: 'q',
+    quote: { text: 'Edited', note: '', page_number: '' },
   });
-  expect(eq).toHaveBeenCalledWith('id', 'q');
+  expect(from).not.toHaveBeenCalled();
 });
 
 import { isPublishableKey, isSupabaseUrl } from '../lib/publicConfig';
@@ -118,7 +113,7 @@ it('requests an owner-only random quote while excluding the current quote ID', a
   };
   rpc.mockResolvedValue({ data: [quote], error: null });
   expect(await getRandomLibraryQuote('q1')).toEqual(quote);
-  expect(rpc).toHaveBeenCalledWith('get_random_library_quote', {
+  expect(rpc).toHaveBeenCalledWith('get_random_library_entry_quote', {
     exclude_quote_id: 'q1',
   });
   expect(from).not.toHaveBeenCalled();

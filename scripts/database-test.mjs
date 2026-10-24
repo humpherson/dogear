@@ -149,13 +149,24 @@ try {
 
   const pool = await admin
     .from('quotes')
-    .select('text,user_books(books(title,authors,published_date))');
+    .select(
+      'text,credit_mode,credit_author,credit_source,credit_year,user_books(books(title,authors,published_date))',
+    );
   assert.ifError(pool.error);
   const publicPool = pool.data.map((row) => ({
     text: row.text,
-    author: row.user_books.books.authors.join(', ') || 'Unknown author',
-    book_title: row.user_books.books.title,
-    published_year: row.user_books.books.published_date?.slice(0, 4) || null,
+    author:
+      row.credit_mode === 'custom'
+        ? row.credit_author
+        : row.user_books.books.authors.join(', ') || 'Unknown author',
+    book_title:
+      row.credit_mode === 'custom'
+        ? row.credit_source
+        : row.user_books.books.title,
+    published_year:
+      row.credit_mode === 'custom'
+        ? row.credit_year
+        : row.user_books.books.published_date?.slice(0, 4) || null,
   }));
   for (const client of [anon, a.client, b.client]) {
     const random = await client.rpc('get_random_homepage_quote');

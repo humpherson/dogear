@@ -80,6 +80,43 @@ export type Database = {
         };
         Relationships: [];
       };
+      collections: {
+        Row: {
+          background_colour: string;
+          border_colour: string;
+          created_at: string;
+          icon_colour: string;
+          id: string;
+          name: string;
+          text_colour: string;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          background_colour?: string;
+          border_colour?: string;
+          created_at?: string;
+          icon_colour?: string;
+          id?: string;
+          name: string;
+          text_colour?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          background_colour?: string;
+          border_colour?: string;
+          created_at?: string;
+          icon_colour?: string;
+          id?: string;
+          name?: string;
+          text_colour?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -104,37 +141,59 @@ export type Database = {
       };
       quotes: {
         Row: {
+          collection_id: string | null;
           created_at: string;
+          credit_author: string | null;
+          credit_mode: string;
+          credit_source: string | null;
+          credit_year: string | null;
           id: string;
           note: string | null;
           page_number: string | null;
           text: string;
           updated_at: string;
-          user_book_id: string;
+          user_book_id: string | null;
           user_id: string;
         };
         ComputedFields: never;
         Insert: {
+          collection_id?: string | null;
           created_at?: string;
+          credit_author?: string | null;
+          credit_mode?: string;
+          credit_source?: string | null;
+          credit_year?: string | null;
           id?: string;
           note?: string | null;
           page_number?: string | null;
           text: string;
           updated_at?: string;
-          user_book_id: string;
+          user_book_id?: string | null;
           user_id: string;
         };
         Update: {
+          collection_id?: string | null;
           created_at?: string;
+          credit_author?: string | null;
+          credit_mode?: string;
+          credit_source?: string | null;
+          credit_year?: string | null;
           id?: string;
           note?: string | null;
           page_number?: string | null;
           text?: string;
           updated_at?: string;
-          user_book_id?: string;
+          user_book_id?: string | null;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'quotes_collection_owner';
+            columns: ['collection_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'collections';
+            referencedColumns: ['id', 'user_id'];
+          },
           {
             foreignKeyName: 'quotes_user_book_id_user_id_fkey';
             columns: ['user_book_id', 'user_id'];
@@ -179,6 +238,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      collection_quote_payload: { Args: { input: Json }; Returns: Json };
+      delete_library_quote: {
+        Args: { quote_id: string };
+        Returns: {
+          collection_id: string;
+          remaining_count: number;
+          user_book_id: string;
+        }[];
+      };
       delete_quote: { Args: { quote_id: string }; Returns: undefined };
       delete_quote_result: {
         Args: { quote_id: string };
@@ -187,6 +255,22 @@ export type Database = {
           user_book_id: string;
         }[];
       };
+      edit_collection: {
+        Args: {
+          appearance?: Json;
+          collection_id: string;
+          collection_name: string;
+        };
+        Returns: Json;
+      };
+      edit_library_quote: {
+        Args: { quote: Json; quote_id: string };
+        Returns: Json;
+      };
+      get_library_entries: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json[];
+      };
       get_random_homepage_quote: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -194,6 +278,19 @@ export type Database = {
           book_title: string;
           published_year: string;
           text: string;
+        }[];
+      };
+      get_random_library_entry_quote: {
+        Args: { exclude_quote_id?: string };
+        Returns: {
+          author: string;
+          book_title: string;
+          entry_kind: string;
+          entry_title: string;
+          published_year: string;
+          quote_id: string;
+          text: string;
+          user_book_id: string;
         }[];
       };
       get_random_library_quote: {
@@ -207,6 +304,42 @@ export type Database = {
           user_book_id: string;
         }[];
       };
+      library_entry_result: {
+        Args: { entry_id: string; entry_kind: string; summary_only?: boolean };
+        Returns: Json;
+      };
+      move_quote: {
+        Args: {
+          credits?: Json;
+          new_collection_name?: string;
+          quote_id: string;
+          target_id?: string;
+          target_kind: string;
+        };
+        Returns: Json;
+      };
+      move_quote_with_appearance: {
+        Args: {
+          appearance?: Json;
+          credits?: Json;
+          new_collection_name?: string;
+          quote_id: string;
+          target_id?: string;
+          target_kind: string;
+        };
+        Returns: Json;
+      };
+      rename_collection: {
+        Args: { collection_id: string; collection_name: string };
+        Returns: Json;
+      };
+      save_collection_quote: {
+        Args: { collection_id?: string; collection_name?: string; quote: Json };
+        Returns: {
+          library_entry: Json;
+          quote_record: Json;
+        }[];
+      };
       save_quote_with_book: {
         Args: { book: Json; quote: Json };
         Returns: {
@@ -216,6 +349,18 @@ export type Database = {
       };
       save_quote_with_book_result: {
         Args: { book: Json; quote: Json };
+        Returns: {
+          library_entry: Json;
+          quote_record: Json;
+        }[];
+      };
+      save_styled_collection_quote: {
+        Args: {
+          appearance?: Json;
+          collection_id?: string;
+          collection_name?: string;
+          quote: Json;
+        };
         Returns: {
           library_entry: Json;
           quote_record: Json;

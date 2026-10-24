@@ -1,3 +1,5 @@
+import { isCollection, entryTitle, entryPath } from '../types';
+import { CollectionCover } from '../components/collections/CollectionDetails';
 import { prefetchBook } from '../features/library/prefetchBook';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,7 +36,7 @@ export function LibraryPage() {
             <h1>
               Your library<span className="gold">.</span>
             </h1>
-            <p className="muted">A little of every book that stays with you.</p>
+            <p className="muted">Words worth keeping, from books and beyond.</p>
           </div>
           <Link className="button" to="/quotes/new">
             <Plus size={18} />
@@ -54,8 +56,8 @@ export function LibraryPage() {
             <BookOpen size={42} />
             <h2>Your first dogeard is waiting.</h2>
             <p>
-              Save a quote from a book you love. Your library grows one passage
-              at a time.
+              Save a quote from a book, a conversation or your own thoughts.
+              Your library grows one passage at a time.
             </p>
             <Link className="button" to="/quotes/new">
               Find a book
@@ -66,21 +68,46 @@ export function LibraryPage() {
             {query.data.map((entry) => (
               <Link
                 className="book-card"
-                key={entry.id}
-                to={`/books/${entry.id}`}
+                key={`${isCollection(entry) ? 'collection' : 'book'}-${entry.id}`}
+                to={entryPath(entry)}
                 onMouseEnter={() =>
-                  prefetchBook(client, session?.user.id, entry.id)
+                  prefetchBook(
+                    client,
+                    session?.user.id,
+                    entry.id,
+                    isCollection(entry) ? 'collection' : 'book',
+                  )
                 }
-                onFocus={() => prefetchBook(client, session?.user.id, entry.id)}
+                onFocus={() =>
+                  prefetchBook(
+                    client,
+                    session?.user.id,
+                    entry.id,
+                    isCollection(entry) ? 'collection' : 'book',
+                  )
+                }
                 onTouchStart={() =>
-                  prefetchBook(client, session?.user.id, entry.id)
+                  prefetchBook(
+                    client,
+                    session?.user.id,
+                    entry.id,
+                    isCollection(entry) ? 'collection' : 'book',
+                  )
                 }
               >
                 <div className="book-stage">
-                  <Cover book={entry.books} large />
+                  {isCollection(entry) ? (
+                    <CollectionCover {...entry} large />
+                  ) : (
+                    <Cover book={entry.books} large />
+                  )}
                 </div>
-                <h2>{entry.books.title}</h2>
-                <p>{entry.books.authors.join(', ') || 'Unknown author'}</p>
+                <h2>{entryTitle(entry)}</h2>
+                <p>
+                  {isCollection(entry)
+                    ? 'Collection'
+                    : entry.books.authors.join(', ') || 'Unknown author'}
+                </p>
                 <span className="quote-count">
                   {entry.quotes[0]?.count || 0}{' '}
                   {(entry.quotes[0]?.count || 0) === 1 ? 'quote' : 'quotes'}{' '}

@@ -61,7 +61,9 @@ it('filters saved books locally and selects a legacy book with its catalog ID in
   expect(
     screen.queryByRole('button', { name: /Choose A Book/ }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole('status')).toHaveTextContent('No saved books match');
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'No saved books or collections match',
+  );
   await user.clear(filter);
   await user.type(filter, 'a. writer');
   const choice = screen.getByRole('button', {
@@ -88,9 +90,7 @@ it('keeps external search available for an empty library', async () => {
   await userEvent.click(
     screen.getByRole('button', { name: 'Choose from your library' }),
   );
-  expect(
-    await screen.findByText(/No books in your library yet/),
-  ).toBeInTheDocument();
+  expect(await screen.findByText(/Your library is empty/)).toBeInTheDocument();
   await userEvent.click(
     screen.getByRole('button', { name: 'Find a new book' }),
   );
@@ -171,4 +171,58 @@ it('keeps the user’s active search open when the library finishes loading', as
   expect(
     screen.queryByLabelText('Filter your library'),
   ).not.toBeInTheDocument();
+});
+
+it('selects a saved collection locally and creates only a draft from the third panel', async () => {
+  const collection = {
+    kind: 'collection' as const,
+    id: 'c',
+    user_id: 'reader',
+    name: 'Little observations',
+    created_at: '',
+    updated_at: '',
+    quotes: [{ count: 1 }],
+  };
+  vi.spyOn(library, 'getLibrary').mockResolvedValue([collection]);
+  const search = vi.spyOn(booksApi, 'searchBooks');
+  const select = vi.fn();
+  render(
+    <AuthContext.Provider
+      value={{
+        session: { user: { id: 'reader' } } as Session,
+        loading: false,
+        recovery: false,
+        error: null,
+      }}
+    >
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <BookPicker onSelect={vi.fn()} onSelectCollection={select} />
+      </QueryClientProvider>
+    </AuthContext.Provider>,
+  );
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('button', { name: /Choose Little observations/ }),
+  );
+  expect(select).toHaveBeenCalledWith(collection);
+  await user.click(screen.getByRole('button', { name: 'Create a collection' }));
+  expect(
+    screen.queryByLabelText('Filter your library'),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Use this collection' }));
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Enter a collection name',
+  );
+  await user.type(
+    screen.getByLabelText('Collection name'),
+    '  Passing thoughts  ',
+  );
+  await user.click(screen.getByRole('button', { name: 'Use this collection' }));
+  expect(select).toHaveBeenLastCalledWith({ name: 'Passing thoughts' });
+  expect(search).not.toHaveBeenCalled();
 });

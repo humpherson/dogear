@@ -2,6 +2,38 @@
 
 Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
 
+## Compact colour dropdowns
+
+Each collection appearance field now shows a closed dropdown with its current colour chip and name. Opening a dropdown reveals the existing 12 swatches; only one palette is open at a time. Choosing a swatch, including the current choice, closes the palette and restores trigger focus. Escape and outside clicks close it. Panels expand within the form to avoid clipping inside mobile dialogs. Closing on a completed outside click avoids shifting subsequent controls during a tap.
+
+Validation: 79 unit tests, lint, typecheck, formatting and production build checks passed. Focused desktop/mobile browser checks cover initially collapsed palettes, 12 options when open, 44 px swatches, Escape/focus return, outside clicks, switching dropdowns, persistence after reload, collection workflows and accessibility. No database change was needed.
+
+## Mobile collection colour swatches
+
+Replaced native colour inputs with 12 coordinated, named swatches for each of background, icon, text and border. Native radio groups provide keyboard selection and accessible names; 44 px targets, focus rings and a checkmark make selection clear on mobile. Four-column grids fit narrow screens. Previously saved custom colours remain intact until the corresponding field is changed. No database schema or persistence changes were needed.
+
+Validation: 79 unit tests, lint, typecheck, formatting and a production root build passed. Focused desktop/mobile browser checks passed for 12 options per group, minimum 44 px tap targets, absence of native colour inputs, saved palette choices after reload, creation/edit/move workflows and accessibility. The mobile swatch layout was inspected. Database tests were not repeated for this UI-only change.
+
+## Collection names and colours
+
+Collection thumbnails now show the collection name with a single-line ellipsis, while the full name remains beside/below the thumbnail. Books and collections share thumbnail dimensions. Creation, including creation during a quote move, supports separate background, icon, text and border colour controls. Edit collection updates name and colours together with a preview. Saved colours flow through canonical caches to library, picker and detail views and persist after reload. Existing collections retain their default palette.
+
+Applied additive migration `202610240008_collection_colours.sql` locally and regenerated database types. Hex colours are constrained on private collection rows and validated by authenticated save/edit/move wrappers. Invalid appearance rolls back creation or rename. Existing RPC signatures remain compatible; public quotation projection is unchanged. No hosted migration/deployment was performed. Apply pending migrations before deploying this frontend.
+
+Validation: 79 unit/component/service tests and 148 database checks (78 existing plus 70 collection checks) passed. New database cases cover persistence, partial edits, invalid keys/types/colours, rollback, styled moves and ownership/anonymous denial. Root desktop/mobile browser checks passed; project-path checks passed after fixing a test to wait for the edit dialog to close before measuring the thumbnail. Final focused browser checks verify independent icon/text colours and long-name truncation. Desktop/mobile screenshots were inspected. Lint, typecheck, formatting and root/project production builds passed; the existing Vite bundle-size advisory remains.
+
+## Collections
+
+Implemented user-owned collections alongside books, with a third single-open picker panel, optional quote author/source credits, private names, collection detail/rename flows, and moves between books and collections. Creation and moves can create a collection only with its first quote. Moving or deleting the final quote removes the empty source entry. Moves preserve quote IDs, creation dates, text, private notes and references; book attribution becomes explicit credits rather than changing to destination metadata. Users can clear credits, and changed sources clear publication years.
+
+Applied additive migration `202610240007_collections.sql` locally without resetting data, and regenerated database types. Every quote has exactly one parent with a composite ownership FK. New mutation RPCs and legacy book saves/deletes share a per-user transaction lock before existing book locks. RLS and restricted execution enforce ownership. The public sampler still exposes exactly four fields, with custom source using the legacy `book_title` alias; collection names and private fields are excluded. The authenticated hero includes collection navigation independently of public credits.
+
+The unified library RPC returns compact book summaries and collections. Existing user-scoped freshness, intent prefetch, cancellation and canonical mutation caching extend to collection details and quotes. Rename updates private titles; moves update both parents and authoritative counts, with targeted background reconciliation. No Open Library request is needed for collection workflows.
+
+Validation: 79 unit/component/service tests and 133 real database checks (78 existing plus 55 collection checks) passed. Database coverage includes ownership, anonymous denial, direct-write denial, exactly-one-parent constraints, rollback, duplicate names, last-quote cleanup, opposing concurrent moves, rename collisions and save/delete races. Desktop/mobile production browser checks cover creation, reuse, rename, moving/clearing credits, reload persistence, original attribution, private notes, identity preservation and existing auth/performance regressions. All 22 browser checks passed at the root path and all 22 passed at the project path. Axe checks passed on collection details and the move dialog, and desktop/mobile screenshots were inspected. Lint, typecheck, formatting, production builds and git diff whitespace checks passed. Vite reports the main application bundle above its 500 kB advisory threshold; route details remain lazy and navigation performance regressions pass.
+
+Hosted migration/deployment has not been performed. Apply migration 007 to the hosted Supabase project before deploying this frontend; review using `npx supabase db push --dry-run`, then apply using `npx supabase db push`.
+
 ## Library and quote navigation performance
 
 Implemented cached book summaries with independent details/quote rendering; 60-second full-detail and 30-second library/quote/hero freshness; compact library projections without descriptions/ISBNs; on-demand saved metadata; parallel hero/library reads; retained hero selection; intent-based book code/data prefetching; and lazy/async grid/picker cover images with explicit dimensions. The main opened-book cover remains eager.

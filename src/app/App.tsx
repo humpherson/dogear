@@ -1,4 +1,8 @@
-import { loadLibraryPage, loadBookPage } from './pageLoaders';
+import {
+  loadLibraryPage,
+  loadBookPage,
+  loadCollectionPage,
+} from './pageLoaders';
 import { AuthPage } from '../pages/AuthPage';
 import { AddQuotePage } from '../pages/AddQuotePage';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
@@ -11,6 +15,7 @@ import { AppShell } from '../components/layout/AppShell';
 import { LandingPage } from '../pages/LandingPage';
 const LibraryPage = lazy(loadLibraryPage);
 const BookPage = lazy(loadBookPage);
+const CollectionPage = lazy(loadCollectionPage);
 import { config } from '../lib/env';
 const client = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -92,6 +97,10 @@ export function App({ callbackError }: { callbackError?: string }) {
               <Route element={<ProtectedRoute />}>
                 <Route path="library" element={<LibraryPage />} />
                 <Route path="books/:userBookId" element={<BookPage />} />
+                <Route
+                  path="collections/:collectionId"
+                  element={<CollectionPage />}
+                />
                 <Route path="quotes/new" element={<AddQuotePage />} />
                 <Route
                   path="settings"
