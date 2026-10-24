@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { LoadingIndicator } from '../components/ui/LoadingIndicator';
+import { lazy } from 'react';
 import { HashRouter, Navigate, Route, Routes, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../features/auth/AuthProvider';
@@ -38,7 +39,8 @@ function Callback({ error }: { error?: string }) {
         </p>
       </section>
     );
-  if (loading) return <p role="status">Confirming your session…</p>;
+  if (loading)
+    return <LoadingIndicator>Confirming your session…</LoadingIndicator>;
   return (
     <Navigate
       to={session ? (recovery ? '/update-password' : '/library') : '/login'}
@@ -50,10 +52,10 @@ export function App({ callbackError }: { callbackError?: string }) {
   if (!config)
     return (
       <main className="setup">
-        <span className="wordmark">dogear.</span>
+        <span className="wordmark">dogeard.</span>
         <h1>A little setup first.</h1>
         <p>
-          Dogear needs Supabase to save your library and keep your notes
+          Dogeard needs Supabase to save your library and keep your notes
           private.
         </p>
         <ol>
@@ -75,51 +77,49 @@ export function App({ callbackError }: { callbackError?: string }) {
     <QueryClientProvider client={client}>
       <AuthProvider>
         <HashRouter>
-          <Suspense fallback={<p role="status">Opening this page…</p>}>
-            <Routes>
-              <Route element={<AppShell />}>
-                <Route index element={<LandingPage />} />
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route index element={<LandingPage />} />
+              <Route
+                path="login"
+                element={<AuthPage key="login" mode="login" />}
+              />
+              <Route
+                path="signup"
+                element={<AuthPage key="signup" mode="signup" />}
+              />
+              <Route
+                path="reset-password"
+                element={<AuthPage key="reset" mode="reset" />}
+              />
+              <Route
+                path="update-password"
+                element={<AuthPage key="update" mode="update" />}
+              />
+              <Route
+                path="auth/callback"
+                element={<Callback error={callbackError} />}
+              />
+              <Route element={<ProtectedRoute />}>
+                <Route path="library" element={<LibraryPage />} />
+                <Route path="books/:userBookId" element={<BookPage />} />
+                <Route path="quotes/new" element={<AddQuotePage />} />
                 <Route
-                  path="login"
-                  element={<AuthPage key="login" mode="login" />}
-                />
-                <Route
-                  path="signup"
-                  element={<AuthPage key="signup" mode="signup" />}
-                />
-                <Route
-                  path="reset-password"
-                  element={<AuthPage key="reset" mode="reset" />}
-                />
-                <Route
-                  path="update-password"
-                  element={<AuthPage key="update" mode="update" />}
-                />
-                <Route
-                  path="auth/callback"
-                  element={<Callback error={callbackError} />}
-                />
-                <Route element={<ProtectedRoute />}>
-                  <Route path="library" element={<LibraryPage />} />
-                  <Route path="books/:userBookId" element={<BookPage />} />
-                  <Route path="quotes/new" element={<AddQuotePage />} />
-                  <Route
-                    path="settings"
-                    element={<Navigate to="/library" replace />}
-                  />
-                </Route>
-                <Route
-                  path="*"
-                  element={
-                    <section className="empty">
-                      <h1>A page turned too far.</h1>
-                      <Link to="/">Return home</Link>
-                    </section>
-                  }
+                  path="settings"
+                  element={<Navigate to="/library" replace />}
                 />
               </Route>
-            </Routes>
-          </Suspense>
+              <Route
+                path="*"
+                element={
+                  <section className="empty">
+                    <h1>A page turned too far.</h1>
+                    <Link to="/">Return home</Link>
+                  </section>
+                }
+              />
+            </Route>
+          </Routes>
         </HashRouter>
       </AuthProvider>
     </QueryClientProvider>

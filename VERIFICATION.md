@@ -2,6 +2,14 @@
 
 Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
 
+## Loading feedback
+
+The initial HTML now contains a branded startup indicator, visible before application JavaScript and during authentication callbacks. Shared status spinners cover session checks, initial page/database reads, homepage/personal quote loading, library selection, Open Library searches (including debounce and queue waits), selected descriptions, and pending authentication/save/edit/delete/refresh controls. A small, non-blocking activity badge tracks active TanStack Query reads and mutations, including background refetches. The app header/footer remain mounted while lazy page code loads. Existing data remains visible during background requests, write controls retain pending labels and disable duplicate submissions, and reduced-motion preferences stop spinner rotation.
+
+The homepage quote was already fetched within its card; it does not block rendering the rest of the signed-out homepage after session resolution. This change adds visible feedback rather than claiming lower database/API latency. Sampling still requests a fresh user-added quote on each homepage visit.
+
+Validation: 63 unit/component/service tests passed, including concurrent reads, mutation errors, cancellation, disabled/cached queries, background refreshes retaining data, session checks, and a suspended page retaining navigation. All 10 desktop/mobile production browser checks passed at the project path and all 10 passed at the domain root. They cover initial HTML with JavaScript held back, delayed Supabase quote reads, failure cleanup, delayed Open Library searches, pending quote saves, and reduced-motion/accessibility behaviour. Desktop/mobile loading screenshots were inspected. Lint, typecheck, formatting, and both production builds passed. Database schema, authentication backend, and request semantics are unchanged; database checks were not repeated for this UI change.
+
 ## Navigation sign-out
 
 Signed-in navigation now offers Library, Add quote, and a Sign out button. Settings is hidden, its route redirects to the library, and its component remains dormant for future use. Successful sign-out returns to the sign-in screen from any page, including password recovery. Sign out uses the existing Supabase session lifecycle and private-cache clearing; pending feedback prevents repeat clicks and failures show a retryable error.

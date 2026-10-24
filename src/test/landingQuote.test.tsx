@@ -114,7 +114,7 @@ function renderLanding(state: Partial<AuthState>) {
 it('does not request samples until initial authentication resolves', () => {
   const get = vi.spyOn(samples, 'getRandomHomepageQuote');
   renderLanding({ loading: true });
-  expect(screen.getByRole('status')).toHaveTextContent('Opening Dogear');
+  expect(screen.getByRole('status')).toHaveTextContent('Opening Dogeard');
   expect(get).not.toHaveBeenCalled();
 });
 it('redirects signed-in users without fetching a public sample', async () => {

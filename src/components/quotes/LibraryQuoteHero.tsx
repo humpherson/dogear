@@ -1,3 +1,4 @@
+import { LoadingIndicator, Spinner } from '../ui/LoadingIndicator';
 import { useId } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, RefreshCw } from 'lucide-react';
@@ -52,7 +53,7 @@ export function LibraryQuoteHero({ quoteCount }: { quoteCount: number }) {
           </p>
         </>
       ) : query.isPending ? (
-        <p role="status">Finding a quote from your library…</p>
+        <LoadingIndicator>Finding a quote from your library…</LoadingIndicator>
       ) : !query.isError ? (
         <p>Save a quote to give these words a home.</p>
       ) : null}
@@ -66,10 +67,15 @@ export function LibraryQuoteHero({ quoteCount }: { quoteCount: number }) {
         <button
           type="button"
           className="secondary"
+          aria-busy={query.isFetching}
           onClick={refresh}
           disabled={query.isFetching || (quoteCount === 1 && query.isSuccess)}
         >
-          <RefreshCw size={16} aria-hidden="true" />
+          {query.isFetching ? (
+            <Spinner />
+          ) : (
+            <RefreshCw size={16} aria-hidden="true" />
+          )}
           {query.isFetching ? 'Refreshing…' : 'Refresh'}
         </button>
         {quoteCount === 1 && query.data && (

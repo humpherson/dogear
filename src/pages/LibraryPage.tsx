@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, BookOpen } from 'lucide-react';
@@ -39,7 +40,7 @@ export function LibraryPage() {
         </div>
 
         {query.isPending ? (
-          <p role="status">Gathering your books…</p>
+          <LoadingIndicator>Gathering your books…</LoadingIndicator>
         ) : query.isError ? (
           <div role="alert">
             {message(query.error)}{' '}
@@ -48,7 +49,7 @@ export function LibraryPage() {
         ) : !query.data.length ? (
           <section className="empty">
             <BookOpen size={42} />
-            <h2>Your first dogear is waiting.</h2>
+            <h2>Your first dogeard is waiting.</h2>
             <p>
               Save a quote from a book you love. Your library grows one passage
               at a time.

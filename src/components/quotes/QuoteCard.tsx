@@ -1,3 +1,4 @@
+import { Spinner } from '../ui/LoadingIndicator';
 import { useState } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -89,9 +90,11 @@ export function QuoteCard({
                       </AlertDialog.Cancel>
                       <button
                         className="danger"
+                        aria-busy={remove.isPending}
                         disabled={remove.isPending}
                         onClick={() => remove.mutate()}
                       >
+                        {remove.isPending && <Spinner />}
                         {remove.isPending ? 'Deleting…' : 'Delete quote'}
                       </button>
                     </div>

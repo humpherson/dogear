@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../ui/LoadingIndicator';
 import { useQuery } from '@tanstack/react-query';
 import { Bookmark } from 'lucide-react';
 import { getRandomHomepageQuote } from '../../services/homepageQuotesService';
@@ -14,6 +15,7 @@ export function LandingQuote() {
   });
   return (
     <div
+      aria-busy={query.isFetching}
       className={
         query.data && query.data.text.length > 600
           ? 'literary-card long-quote'
@@ -23,7 +25,7 @@ export function LandingQuote() {
       <Bookmark size={30} strokeWidth={1} aria-hidden="true" />
       <p className="eyebrow">A little quip</p>
       {query.isPending ? (
-        <p role="status">Finding a little quip…</p>
+        <LoadingIndicator>Finding a little quip…</LoadingIndicator>
       ) : query.isError ? (
         <div role="alert">
           <p>We couldn’t load a sample quote.</p>

@@ -1,10 +1,11 @@
+import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { ArrowRight, Bookmark, LockKeyhole, Library } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthProvider';
 import { LandingQuote } from '../components/quotes/LandingQuote';
 export function LandingPage() {
   const { session, loading } = useAuth();
-  if (loading) return <p role="status">Opening Dogear…</p>;
+  if (loading) return <LoadingIndicator>Opening Dogeard…</LoadingIndicator>;
   if (session) return <Navigate to="/library" replace />;
   return (
     <>
@@ -27,7 +28,7 @@ export function LandingPage() {
         </div>
         <LandingQuote />
       </section>
-      <section className="intro-grid" aria-label="How Dogear works">
+      <section className="intro-grid" aria-label="How Dogeard works">
         <article>
           <Library />
           <h2>Find your book</h2>

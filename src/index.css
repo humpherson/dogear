@@ -909,6 +909,44 @@ hr {
     flex-wrap: wrap;
   }
 }
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-forest);
+}
+.request-activity {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid #dedbce;
+  border-radius: 6px;
+  background: var(--color-paper);
+  color: var(--color-forest);
+  box-shadow: 0 2px 12px #203b351a;
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

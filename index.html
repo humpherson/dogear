@@ -10,12 +10,64 @@
     />
     <meta
       name="description"
-      content="Dogear — a private home for the words that stay with you."
+      content="Dogeard — a private home for the words that stay with you."
     />
-    <title>Dogear — Keep the words that stay with you.</title>
+    <title>Dogeard — Keep the words that stay with you.</title>
+    <style>
+      body {
+        margin: 0;
+      }
+      .app-startup {
+        min-height: 100vh;
+        display: grid;
+        place-content: center;
+        gap: 16px;
+        margin: 0;
+        background: #f5f0e6;
+        color: #203b35;
+        font:
+          16px/1.65 system-ui,
+          sans-serif;
+        text-align: center;
+      }
+      .app-startup strong {
+        font:
+          bold 32px Georgia,
+          serif;
+      }
+      .startup-spinner {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+        vertical-align: middle;
+        border: 2px solid #dedbce;
+        border-top-color: #203b35;
+        border-radius: 50%;
+        animation: startup-spin 0.8s linear infinite;
+      }
+      @keyframes startup-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .startup-spinner {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="app-startup" role="main">
+        <strong>dogeard.</strong>
+        <div role="status">
+          <span class="startup-spinner" aria-hidden="true"></span>
+          Opening Dogeard…
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

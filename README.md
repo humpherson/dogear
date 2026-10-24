@@ -1,4 +1,4 @@
-# dogear.
+# dogeard.
 
 Keep the words that stay with you. A personal, responsive book quotation library built with React, TypeScript, Vite, and Supabase. The frontend deploys as static files to GitHub Pages; it needs no application server.
 
@@ -45,6 +45,8 @@ Sign up using an invented email such as `reader@example.test`. Local confirmatio
 Install the browser once with `npx playwright install chromium` (`--with-deps` on Linux). Start and reset local Supabase before database/browser tests. Neither suite requires hosted credentials. Database tests refuse non-local URLs. Browser tests build with the local public key, exercise both desktop/mobile Chromium, capture local auth emails, and mock only Open Library for reproducibility. Test users are removed afterward. Failure traces may contain test session data; they stay in ignored local output and are not uploaded by CI.
 
 ## Product behavior and architecture
+
+- Loading feedback starts in the initial HTML, before JavaScript or authentication completes. Shared spinners label database reads, Open Library searches/descriptions, saves, deletes, and authentication actions. A small activity badge also covers background query refetches and mutations. Page navigation retains the app header/footer while its code loads; existing content stays visible during background reads. Indicators respect reduced motion and never imply completion before a request succeeds.
 
 - Signed-in navigation offers Library, Add quote, and Sign out. Settings is hidden for now; existing settings URLs redirect to the library. Successful sign-out returns to the sign-in screen from any page.
 

@@ -1,9 +1,9 @@
-# Dogear development guidance
+# Dogeard development guidance
 
 - Read `spec/DOGEAR_TECHNICAL_SPEC.md` and README before changing product behavior.
 - This is a static React/TypeScript application. Keep HashRouter, Vite base-path support, and Supabase as the only auth/storage backend. No SSR, custom backend, ORM, analytics, or fake successful persistence.
 - Use small accessible components, CSS theme tokens, React Hook Form/Zod, and TanStack Query. Service code owns HTTP/database calls. Private query keys include the user ID; clear cached private data when identity changes.
-- Maintain the forest/paper/gold/ink palette and `dogear.` wordmark. Respect reduced motion, labels, focus visibility, and keyboard search navigation.
+- Maintain the forest/paper/gold/ink palette and `dogeard.` wordmark. Respect reduced motion, labels, focus visibility, and keyboard search navigation.
 - Use Node from `.nvmrc`, `npm ci`, and the lockfile. The Supabase CLI is a pinned local dependency.
 - Never put service-role/secret keys in frontend code, `VITE_*`, or committed env files. Public tables require RLS and relational ownership constraints. Security-definer RPCs require an empty/fixed search path, bounded validation, explicit caller ownership, and restricted execution grants.
 - Save and delete quotes through the RPCs. Preserve their shared per-user/book transaction lock and last-quote cleanup. Selecting a book must not create a library entry. Catalog records are immutable to browser callers.

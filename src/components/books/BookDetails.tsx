@@ -32,7 +32,7 @@ export function BookDetails({ book }: { book: BookSearchResult }) {
     <section className="book-details">
       <Cover key={book.source_id} book={book} large />
       <div>
-        <p className="eyebrow">Your next dogear</p>
+        <p className="eyebrow">Your next dogeard</p>
         <h2>{book.title}</h2>
         <p>{book.authors.join(', ') || 'Unknown author'}</p>
         {book.published_date && (

@@ -1,8 +1,8 @@
-# Dogear — Technical Specification
+# Dogeard — Technical Specification
 
 **Status:** Implementation-ready specification  
 **Phase:** 1 — Application foundation and functional vertical slice  
-**App name:** Dogear  
+**App name:** Dogeard  
 **Tagline:** Keep the words that stay with you.
 
 ## 1. Objective
@@ -54,7 +54,7 @@ Use current compatible stable package versions at implementation time; commit th
 
 ## 4. Brand and design system
 
-**Name:** Dogear; **wordmark:** `dogear.`  
+**Name:** Dogeard; **wordmark:** `dogeard.`  
 **Tagline:** Keep the words that stay with you.
 
 Initial palette:
@@ -241,6 +241,8 @@ Use feature-local code where practical. Keep Supabase queries and external API t
 
 **Editing/deleting:** A user can edit their own quote and delete it after confirmation. Removing the last quote removes the corresponding book from their library. Other users cannot access or mutate these records, including by guessing IDs or direct Supabase requests.
 
+**Loading feedback:** Render a branded loading indicator in the initial HTML before JavaScript starts. Keep the application shell visible while lazy pages load. Use shared, labelled spinners for initial reads, Open Library search/debounce/rate-limit waits, selected descriptions, authentication, saving/editing/deleting quotes, and refresh. Show a non-blocking activity indicator for active queries and mutations, including background refetches. Keep existing content visible, disable duplicate submissions, clear indicators on success/error/cancellation, and respect reduced-motion preferences.
+
 **Accessibility:** All forms have labels and errors, search results support keyboard navigation, dialogs manage focus, interactive controls have visible focus, and layouts work at mobile and desktop widths.
 
 ## 11. Environment configuration
@@ -312,4 +314,4 @@ Create an `AGENTS.md` summarizing architecture, conventions, security requiremen
 
 **Initial Codex prompt:**
 
-> Read `DOGEAR_TECHNICAL_SPEC.md` fully. Build the Dogear application foundation and functional vertical slice in this repository following the specification. Start by inspecting the existing repository, then implement in the prescribed order. Use current compatible stable dependencies. Do not introduce a custom backend or expose privileged Supabase keys. Run lint, typecheck, tests, and production build, fixing issues before finishing. If Supabase credentials are not configured, implement migrations and mocked tests, then document exact manual setup and any unverified integration steps. Provide a concise final report of files changed, checks run, remaining configuration, and any deviations.
+> Read `DOGEAR_TECHNICAL_SPEC.md` fully. Build the Dogeard application foundation and functional vertical slice in this repository following the specification. Start by inspecting the existing repository, then implement in the prescribed order. Use current compatible stable dependencies. Do not introduce a custom backend or expose privileged Supabase keys. Run lint, typecheck, tests, and production build, fixing issues before finishing. If Supabase credentials are not configured, implement migrations and mocked tests, then document exact manual setup and any unverified integration steps. Provide a concise final report of files changed, checks run, remaining configuration, and any deviations.

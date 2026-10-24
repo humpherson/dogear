@@ -1,3 +1,4 @@
+import { Spinner } from '../ui/LoadingIndicator';
 import { useEffect, useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
@@ -87,7 +88,10 @@ export function BookSearch({
       </div>
       {open && (
         <>
-          <p className="muted" role="status">
+          <p className="muted loading-indicator" role="status">
+            {input.trim().length >= 3 && (!current || query.isFetching) && (
+              <Spinner />
+            )}
             {input.trim().length < 3
               ? 'Enter at least 3 characters.'
               : !current || query.isFetching

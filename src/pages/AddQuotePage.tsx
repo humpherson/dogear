@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -57,7 +58,7 @@ export function AddQuotePage() {
             <>
               <BookDetails book={selectedBook!} />
               {needsDescription && description.isPending && (
-                <p role="status">Loading book description…</p>
+                <LoadingIndicator>Loading book description…</LoadingIndicator>
               )}
               {needsDescription && description.isError && (
                 <p role="status">

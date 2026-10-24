@@ -74,6 +74,68 @@ test.afterEach(async () => {
     await admin.from('books').delete().in('source_id', fixtureSources);
   fixtureSources.length = 0;
 });
+test('shows startup feedback and keeps the homepage visible during a slow quote request', async ({
+  page,
+}) => {
+  let releaseScript!: () => void;
+  let releaseQuote!: () => void;
+  const scriptGate = new Promise<void>((resolve) => {
+    releaseScript = resolve;
+  });
+  const quoteGate = new Promise<void>((resolve) => {
+    releaseQuote = resolve;
+  });
+  await page.route('**/assets/index-*.js', async (route) => {
+    await scriptGate;
+    await route.continue();
+  });
+  await page.route(
+    '**/rest/v1/rpc/get_random_homepage_quote',
+    async (route) => {
+      await quoteGate;
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Temporarily unavailable' },
+      });
+    },
+  );
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('', { waitUntil: 'commit' });
+    await expect(page.locator('.app-startup')).toContainText(
+      'Opening Dogeard…',
+    );
+    await expect(page.locator('.startup-spinner')).toBeVisible();
+    releaseScript();
+    await expect(page.locator('.lead')).toBeVisible();
+    await expect(
+      page.locator('.literary-card .loading-indicator'),
+    ).toContainText('Finding a little quip');
+    await expect(
+      page.getByRole('progressbar', { name: 'Request in progress' }),
+    ).toBeVisible();
+    expect(
+      await page
+        .locator('.literary-card .spinner')
+        .evaluate((element) => getComputedStyle(element).animationName),
+    ).toBe('none');
+    await checkA11y(page);
+    await page.screenshot({
+      path: `test-results/loading-${test.info().project.name}.png`,
+    });
+    releaseQuote();
+    await expect(page.locator('.literary-card [role="alert"]')).toContainText(
+      'We couldn’t load a sample quote.',
+    );
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+    await expect(page.locator('.literary-card .spinner')).toHaveCount(0);
+    await expect(page.locator('.lead')).toBeVisible();
+  } finally {
+    releaseScript();
+    releaseQuote();
+  }
+});
+
 test('landing, private-route refresh, callback errors, and accessibility', async ({
   page,
 }) => {
@@ -186,8 +248,9 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
 }) => {
   const source = `OL${Date.now()}W`;
   fixtureSources.push(source);
-  await page.route('https://openlibrary.org/search.json?*', (route) =>
-    route.fulfill({
+  await page.route('https://openlibrary.org/search.json?*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.fulfill({
       json: {
         docs: [
           {
@@ -198,15 +261,19 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
           },
         ],
       },
-    }),
-  );
+    });
+  });
   await page.route(`https://openlibrary.org/works/${source}.json`, (route) =>
     route.fulfill({
       json: { description: { value: 'A story worth remembering.' } },
     }),
   );
+  await page.route('**/rest/v1/rpc/save_quote_with_book', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.continue();
+  });
   await signup(page);
-  await expect(page.getByText('Your first dogear is waiting.')).toBeVisible();
+  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);
   await page.reload();
   await expect(
@@ -218,6 +285,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   ).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByLabel('Filter your library')).toHaveCount(0);
   await page.getByRole('combobox').fill('A Book');
+  await expect(page.locator('.search .spinner')).toBeVisible();
   await page.getByRole('combobox').press('ArrowDown');
   await expect(page.getByRole('option')).toBeVisible();
   await page.getByRole('combobox').press('ArrowDown');
@@ -229,6 +297,10 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await page.getByLabel(/Page or location/).fill('xiv');
   await page.getByLabel(/A note to yourself/).fill('Come back to this.');
   await page.getByRole('button', { name: 'Keep this quote' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Saving…', exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator('.quote-form .spinner')).toBeVisible();
   await expect(
     page.getByText('The words we carry become a part of us.', { exact: true }),
   ).toBeVisible();
@@ -332,7 +404,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   ).toBeVisible();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete quote', exact: true }).click();
-  await expect(page.getByText('Your first dogear is waiting.')).toBeVisible();
+  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: 'Settings', exact: true }),
@@ -427,7 +499,7 @@ test('switching accounts in the same browser clears private library data', async
   await page.getByLabel('Email address').fill(emailB);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByText('Your first dogear is waiting.')).toBeVisible();
+  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'A private collection' }),

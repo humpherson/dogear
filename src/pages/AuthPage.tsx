@@ -1,3 +1,4 @@
+import { LoadingIndicator, Spinner } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -81,7 +82,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
       setError(message(e));
     }
   }
-  if (loading) return <p role="status">Checking your session…</p>;
+  if (loading)
+    return <LoadingIndicator>Checking your session…</LoadingIndicator>;
   if (isUpdate && (!session || !recovery))
     return (
       <section className="auth-card">
@@ -112,7 +114,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
           }[mode]
         }
       </p>
-      <form onSubmit={handleSubmit(submit)}>
+      <form onSubmit={handleSubmit(submit)} aria-busy={isSubmitting}>
         {!isUpdate && (
           <>
             <label htmlFor="email">Email address</label>
@@ -157,7 +159,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
             {notice}
           </p>
         )}
-        <button type="submit" disabled={isSubmitting}>
+        <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+          {isSubmitting && <Spinner />}
           {isSubmitting
             ? 'Please wait…'
             : {

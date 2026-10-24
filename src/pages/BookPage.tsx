@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -20,7 +21,7 @@ export function BookPage() {
     queryFn: () => getQuotes(userBookId),
   });
   if (book.isPending || quotes.isPending)
-    return <p role="status">Opening your book…</p>;
+    return <LoadingIndicator>Opening your book…</LoadingIndicator>;
   if (book.isError || quotes.isError)
     return (
       <div role="alert">

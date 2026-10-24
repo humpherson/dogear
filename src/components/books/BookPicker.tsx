@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../ui/LoadingIndicator';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../features/auth/AuthProvider';
@@ -34,9 +35,7 @@ export function BookPicker({
   return (
     <div className="book-picker">
       {activeSection === 'new' && library.isPending && (
-        <p role="status" className="hint">
-          Loading your library…
-        </p>
+        <LoadingIndicator>Loading your library…</LoadingIndicator>
       )}
       {activeSection === 'new' && library.isError && (
         <p role="status" className="hint">
@@ -56,7 +55,7 @@ export function BookPicker({
                   Keep another passage from a book you’ve already saved.
                 </p>
                 {library.isPending ? (
-                  <p role="status">Loading your books…</p>
+                  <LoadingIndicator>Loading your books…</LoadingIndicator>
                 ) : library.isError ? (
                   <div role="alert">
                     {message(library.error)}{' '}

@@ -1,3 +1,6 @@
+import { Suspense } from 'react';
+import { LoadingIndicator, Spinner } from '../ui/LoadingIndicator';
+import { RequestActivity } from './RequestActivity';
 import { useMutation } from '@tanstack/react-query';
 import { signOut } from '../../services/authService';
 import { message } from '../../lib/validation';
@@ -27,7 +30,7 @@ export function AppShell() {
       </a>
       <header className="site-header">
         <Link className="wordmark" to="/">
-          dogear<span>.</span>
+          dogeard<span>.</span>
         </Link>
         <nav aria-label="Main navigation">
           {session ? (
@@ -45,8 +48,13 @@ export function AppShell() {
                 className="nav-sign-out"
                 onClick={() => logout.mutate()}
                 disabled={logout.isPending}
+                aria-busy={logout.isPending}
               >
-                <LogOut size={18} aria-hidden="true" />
+                {logout.isPending ? (
+                  <Spinner />
+                ) : (
+                  <LogOut size={18} aria-hidden="true" />
+                )}
                 {logout.isPending ? 'Signing out…' : 'Sign out'}
               </button>
             </>
@@ -66,10 +74,15 @@ export function AppShell() {
         </p>
       )}
       <main id="main" tabIndex={-1}>
-        <Outlet />
+        <RequestActivity />
+        <Suspense
+          fallback={<LoadingIndicator>Opening this page…</LoadingIndicator>}
+        >
+          <Outlet />
+        </Suspense>
       </main>
       <footer>
-        <span className="wordmark">dogear.</span>
+        <span className="wordmark">dogeard.</span>
         <span>A little space for words that matter.</span>
       </footer>
     </>

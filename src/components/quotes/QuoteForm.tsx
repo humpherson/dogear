@@ -1,3 +1,4 @@
+import { Spinner } from '../ui/LoadingIndicator';
 import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,7 +28,11 @@ export function QuoteForm({
     defaultValues: initial || { text: '', page_number: '', note: '' },
   });
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="quote-form">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="quote-form"
+      aria-busy={pending}
+    >
       <label htmlFor={`${id}-quote-text`}>The words you want to keep</label>
       <textarea
         id={`${id}-quote-text`}
@@ -76,7 +81,8 @@ export function QuoteForm({
         notes and account details stay private.
       </p>
       <div className="actions">
-        <button disabled={pending} type="submit">
+        <button disabled={pending} type="submit" aria-busy={pending}>
+          {pending && <Spinner />}
           {pending
             ? pendingLabel
             : initial
