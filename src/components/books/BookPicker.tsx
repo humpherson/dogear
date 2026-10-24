@@ -2,9 +2,9 @@ import { LoadingIndicator } from '../ui/LoadingIndicator';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../features/auth/AuthProvider';
-import { getLibrary } from '../../services/libraryService';
+import { libraryQueryOptions } from '../../features/library/libraryQuery';
 import { message } from '../../lib/validation';
-import type { BookSearchResult } from '../../types';
+import type { SelectedBook } from '../../types';
 import { Cover } from './BookDetails';
 import { BookSearch } from './BookSearch';
 import { Accordion } from '../ui/Accordion';
@@ -12,17 +12,13 @@ import { Accordion } from '../ui/Accordion';
 export function BookPicker({
   onSelect,
 }: {
-  onSelect: (book: BookSearchResult) => void;
+  onSelect: (book: SelectedBook, userBookId?: string) => void;
 }) {
   const { session } = useAuth();
   const [filter, setFilter] = useState('');
   const [chosenSection, setChosenSection] = useState<string | null>(null);
   const id = useId();
-  const library = useQuery({
-    queryKey: ['private', session?.user.id, 'library'],
-    queryFn: getLibrary,
-    enabled: !!session,
-  });
+  const library = useQuery(libraryQueryOptions(session?.user.id));
   const activeSection =
     chosenSection ?? (library.data?.length ? 'library' : 'new');
   const term = filter.trim().toLocaleLowerCase();
@@ -92,7 +88,7 @@ export function BookPicker({
                             <button
                               type="button"
                               className="library-book-choice"
-                              onClick={() => onSelect(entry.books)}
+                              onClick={() => onSelect(entry.books, entry.id)}
                             >
                               <span className="sr-only">Choose</span>{' '}
                               <span aria-hidden="true">

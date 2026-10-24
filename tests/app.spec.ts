@@ -243,6 +243,338 @@ test('landing, private-route refresh, callback errors, and accessibility', async
   await expect(page.getByRole('alert')).toContainText('Expired link');
   await expect(page).toHaveURL(/#\/auth\/callback$/);
 });
+test('cached navigation, compact reads, intent prefetch and confirmed mutations work during slow reads', async ({
+  page,
+}) => {
+  const email = await signup(page);
+  const owner = createClient(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  expect(
+    (
+      await owner.auth.signInWithPassword({
+        email,
+        password: 'Reading-words-123',
+      })
+    ).error,
+  ).toBeNull();
+  const source = `OL${Date.now()}W`;
+  fixtureSources.push(source);
+  const metadata = {
+    source: 'open_library',
+    source_id: source,
+    title: 'A Fast Library Book',
+    authors: ['A Writer'],
+    description: 'Stored description loaded on demand.',
+    cover_url: 'https://covers.openlibrary.org/b/id/1-M.jpg?default=false',
+  };
+  const first = await owner.rpc('save_quote_with_book_result', {
+    book: metadata,
+    quote: { text: 'First cached passage.' },
+  });
+  const second = await owner.rpc('save_quote_with_book_result', {
+    book: metadata,
+    quote: { text: 'Second cached passage.' },
+  });
+  expect(first.error).toBeNull();
+  expect(second.error).toBeNull();
+  let releaseLibrary!: () => void,
+    releaseHero!: () => void,
+    releaseDetails!: () => void,
+    releaseQuotes!: () => void,
+    releaseBackground!: () => void;
+  const libraryGate = new Promise<void>((resolve) => {
+    releaseLibrary = resolve;
+  });
+  const heroGate = new Promise<void>((resolve) => {
+    releaseHero = resolve;
+  });
+  const detailsGate = new Promise<void>((resolve) => {
+    releaseDetails = resolve;
+  });
+  const quotesGate = new Promise<void>((resolve) => {
+    releaseQuotes = resolve;
+  });
+  const backgroundGate = new Promise<void>((resolve) => {
+    releaseBackground = resolve;
+  });
+  const reads = { library: 0, hero: 0, details: 0, quotes: 0 };
+  let blockBackground = false;
+  await page.route('https://covers.openlibrary.org/**', (route) =>
+    route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="46" height="68"><rect width="46" height="68" fill="tan"/></svg>',
+    }),
+  );
+  await page.route('**/rest/v1/user_books?*', async (route) => {
+    const isDetails = new URL(route.request().url()).searchParams.has('id');
+    reads[isDetails ? 'details' : 'library']++;
+    await (blockBackground
+      ? backgroundGate
+      : isDetails
+        ? detailsGate
+        : libraryGate);
+    await route.continue().catch(() => undefined);
+  });
+  await page.route('**/rest/v1/quotes?*', async (route) => {
+    if (route.request().method() === 'GET') {
+      reads.quotes++;
+      await (blockBackground ? backgroundGate : quotesGate);
+    }
+    await route.continue().catch(() => undefined);
+  });
+  await page.route('**/rest/v1/rpc/get_random_library_quote', async (route) => {
+    reads.hero++;
+    await (blockBackground ? backgroundGate : heroGate);
+    await route.continue().catch(() => undefined);
+  });
+  try {
+    await page.reload();
+    await expect.poll(() => reads.library).toBe(1);
+    await expect.poll(() => reads.hero).toBe(1);
+    const response = page.waitForResponse(
+      (value) =>
+        value.url().includes('/rest/v1/user_books?') &&
+        !new URL(value.url()).searchParams.has('id'),
+    );
+    releaseHero();
+    releaseLibrary();
+    const summary = await (await response).json();
+    expect(summary[0].books).not.toHaveProperty('description');
+    expect(summary[0].books).not.toHaveProperty('isbn_10');
+    const card = page
+      .locator('.book-card')
+      .filter({ has: page.getByRole('heading', { name: metadata.title }) });
+    await expect(card).toBeVisible();
+    await expect(card.locator('img')).toHaveAttribute('loading', 'lazy');
+    await expect(card.locator('img')).toHaveAttribute('decoding', 'async');
+    await card.focus();
+    await expect.poll(() => reads.details).toBe(1);
+    await expect.poll(() => reads.quotes).toBe(1);
+    await card.click();
+    await expect(
+      page.getByRole('heading', { name: metadata.title }),
+    ).toBeVisible();
+    await expect(page.getByText('Loading your quotes…')).toBeVisible();
+    releaseDetails();
+    await expect(page.getByText(metadata.description)).toBeVisible();
+    await expect(page.getByText('Loading your quotes…')).toBeVisible();
+    releaseQuotes();
+    await expect(
+      page.getByText('First cached passage.', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Second cached passage.', { exact: true }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Library', exact: true }).click();
+    await page.locator('.book-card').click();
+    await expect(
+      page.getByText('First cached passage.', { exact: true }),
+    ).toBeVisible();
+    expect(reads).toEqual({ library: 1, hero: 1, details: 1, quotes: 1 });
+    blockBackground = true;
+    await page
+      .getByRole('button', { name: 'Edit', exact: true })
+      .first()
+      .click();
+    await page
+      .getByLabel('The words you want to keep')
+      .fill('Confirmed edit with reads blocked.');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(
+      page.getByText('Confirmed edit with reads blocked.', { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel('The words you want to keep')).toHaveCount(0);
+    expect(reads.details).toBe(1);
+    expect(reads.quotes).toBe(1);
+    await page
+      .getByRole('button', { name: 'Delete', exact: true })
+      .first()
+      .click();
+    await page
+      .getByRole('button', { name: 'Delete quote', exact: true })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Your quotes (1)' }),
+    ).toBeVisible();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Delete quote', exact: true })
+      .click();
+    await expect(
+      page.getByText('Your first dogeard is waiting.'),
+    ).toBeVisible();
+    await expect(page.locator('.book-card')).toHaveCount(0);
+  } finally {
+    releaseLibrary();
+    releaseHero();
+    releaseDetails();
+    releaseQuotes();
+    releaseBackground();
+  }
+});
+
+test('header Sign in opens without another page-code download', async ({
+  page,
+}) => {
+  await page.goto('');
+  await expect(page.locator('.lead')).toBeVisible();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const extraScripts: string[] = [];
+  await page.route('**/assets/*.js', async (route) => {
+    extraScripts.push(route.request().url());
+    await gate;
+    await route.continue();
+  });
+  try {
+    await page
+      .getByRole('navigation')
+      .getByRole('link', { name: 'Sign in', exact: true })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Welcome back.' }),
+    ).toBeVisible({ timeout: 1500 });
+    await expect(page.getByLabel('Email address')).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+    expect(extraScripts).toEqual([]);
+    await page.getByRole('link', { name: 'Forgot password?' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Find your way back.' }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Back to sign in' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Welcome back.' }),
+    ).toBeVisible();
+    await page
+      .getByRole('link', { name: 'Create an account', exact: true })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Begin your collection.' }),
+    ).toBeVisible();
+    expect(extraScripts).toEqual([]);
+  } finally {
+    release();
+  }
+});
+
+test('book search visibly spins and keeps its status after the field loses focus', async ({
+  page,
+}) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let attempts = 0;
+  await page.route('https://openlibrary.org/search.json?*', async (route) => {
+    if (++attempts === 1) {
+      await gate;
+      await route.fulfill({ status: 503, json: { message: 'Unavailable' } });
+    } else {
+      await route.fulfill({ json: { docs: [] } });
+    }
+  });
+  try {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await signup(page);
+    await expect(
+      page.getByText('Your first dogeard is waiting.'),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Add a quote', exact: true }).click();
+    const input = page.getByRole('combobox');
+    const spinner = page.locator('.search-field-icon .spinner');
+    await input.fill('A slow book');
+    await expect(spinner).toBeVisible();
+    await expect(input).toHaveAttribute('aria-busy', 'true');
+    const rotation = await spinner.evaluate(async (element) => {
+      const before = getComputedStyle(element).transform;
+      await new Promise((resolve) => setTimeout(resolve, 160));
+      return {
+        before,
+        after: getComputedStyle(element).transform,
+        animation: getComputedStyle(element).animationName,
+      };
+    });
+    expect(rotation.animation).toBe('loading-spin');
+    expect(rotation.after).not.toBe(rotation.before);
+    await page.getByRole('heading', { name: 'Keep a quote.' }).click();
+    await expect(spinner).toBeVisible();
+    await expect(page.locator('.search [role="status"]')).toHaveText(
+      'Searching Open Library…',
+    );
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(
+      await spinner.evaluate(
+        (element) => getComputedStyle(element).animationName,
+      ),
+    ).toBe('none');
+    await expect(page.locator('.search [role="status"]')).toHaveText(
+      'Searching Open Library…',
+    );
+    await checkA11y(page);
+    release();
+    await expect(page.locator('.search [role="alert"]')).toContainText(
+      'Open Library is unavailable',
+    );
+    await expect(spinner).toHaveCount(0);
+    await expect(input).toHaveAttribute('aria-busy', 'false');
+    await page.getByRole('button', { name: 'Retry search' }).click();
+    await expect(page.locator('.search [role="status"]')).toHaveText(
+      'No books found. Try another title or author.',
+    );
+    await expect(spinner).toHaveCount(0);
+  } finally {
+    release();
+  }
+});
+
+test('Add quote opens without waiting for more page code or a fresh library request', async ({
+  page,
+}) => {
+  await signup(page);
+  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let libraryReads = 0;
+  const extraScripts: string[] = [];
+  await page.route('**/assets/*.js', async (route) => {
+    extraScripts.push(route.request().url());
+    await gate;
+    await route.continue();
+  });
+  await page.route('**/rest/v1/user_books?*', async (route) => {
+    libraryReads++;
+    await gate;
+    await route.continue();
+  });
+  try {
+    await page.getByRole('link', { name: 'Add a quote', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Keep a quote.' }),
+    ).toBeVisible({ timeout: 1500 });
+    await expect(page.getByRole('combobox')).toBeVisible();
+    expect(extraScripts).toEqual([]);
+    expect(libraryReads).toBe(0);
+    await page.getByRole('link', { name: 'Library', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Your library.' }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Keep a quote.' }),
+    ).toBeVisible({ timeout: 1500 });
+    expect(extraScripts).toEqual([]);
+    expect(libraryReads).toBe(0);
+  } finally {
+    release();
+  }
+});
+
 test('real signup, quote lifecycle, refresh and navigation logout', async ({
   page,
 }) => {
@@ -268,10 +600,13 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
       json: { description: { value: 'A story worth remembering.' } },
     }),
   );
-  await page.route('**/rest/v1/rpc/save_quote_with_book', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    await route.continue();
-  });
+  await page.route(
+    '**/rest/v1/rpc/save_quote_with_book_result',
+    async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await route.continue();
+    },
+  );
   await signup(page);
   await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);

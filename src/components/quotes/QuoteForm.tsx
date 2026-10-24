@@ -9,12 +9,14 @@ export function QuoteForm({
   pending,
   error,
   onCancel,
+  disabled = false,
   pendingLabel = 'Saving…',
 }: {
   initial?: QuoteInput;
   onSubmit: (data: QuoteInput) => void;
   pending: boolean;
   pendingLabel?: string;
+  disabled?: boolean;
   error?: string;
   onCancel?: () => void;
 }) {
@@ -81,7 +83,11 @@ export function QuoteForm({
         notes and account details stay private.
       </p>
       <div className="actions">
-        <button disabled={pending} type="submit" aria-busy={pending}>
+        <button
+          disabled={pending || disabled}
+          type="submit"
+          aria-busy={pending}
+        >
           {pending && <Spinner />}
           {pending
             ? pendingLabel

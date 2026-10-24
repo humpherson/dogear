@@ -2,6 +2,38 @@
 
 Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
 
+## Library and quote navigation performance
+
+Implemented cached book summaries with independent details/quote rendering; 60-second full-detail and 30-second library/quote/hero freshness; compact library projections without descriptions/ISBNs; on-demand saved metadata; parallel hero/library reads; retained hero selection; intent-based book code/data prefetching; and lazy/async grid/picker cover images with explicit dimensions. The main opened-book cover remains eager.
+
+Applied additive migration `202610240006_quote_results.sql` locally and regenerated TypeScript database types. New invoker-rights save/delete response wrappers call the existing RPCs, preserving their validation, ownership checks and transaction locks. They return canonical saved records and authoritative remaining counts. Frontend caches update only after server success, retaining canonical catalog metadata. Incomplete quote lists and library reconciliation refresh in the background without delaying dialogs/navigation; edits and complete confirmed quote lists avoid unnecessary immediate reads. Original RPCs remain available for older clients. Hosted deployment must apply the migration before publishing this frontend; no hosted migration or publication was performed here.
+
+Validation includes real database checks for wrapper results, immutable catalog metadata, anonymous/cross-user denial, validation, and last-quote cleanup. Unit/component tests cover cached partial rendering, independent slow reads, fresh return visits, parallel hero requests, canonical save/edit/delete cache updates, non-blocking reconciliation, account scope, and deduplicated prefetches. A production desktop/mobile regression holds library, hero, detail and quote requests separately to verify request ordering, compact response fields, native image loading attributes, cached navigation without repeated reads, and editing/deleting while follow-up reads are blocked. Saved metadata retry retains typed quote text and makes no external metadata request.
+
+Results: 76 unit/component/service tests, 78 real database checks, and all 18 desktop/mobile production browser checks at each of the root and project paths passed. Lint, typecheck, formatting, and production builds passed. Coverage also includes stale saved selections that can no longer be read, with a clear recovery action and no incomplete save.
+
+## Header Sign in navigation
+
+Authentication screens are now included in initial application code. Clicking the homepage header’s Sign in link no longer waits for a lazy authentication-page download. Registration and password-recovery navigation reuse that same loaded code. Form submission, session handling, and Supabase authentication are unchanged.
+
+A production browser regression reproduced the previous delay by blocking further JavaScript requests after the homepage rendered: the Sign in screen could not open. The updated regression requires the header link to show the sign-in form while downloads remain blocked and confirms registration/reset navigation also avoids additional scripts. This addresses page-opening latency; it does not claim to change hosted authentication response times. Authentication screen code now downloads up front instead of on first use.
+
+Validation: 66 unit/component/service tests and all 16 desktop/mobile production browser checks passed at the domain root, including navigation with further script downloads blocked, registration, recovery, sign-out, account switching, and quote saving/editing/deletion. Lint, typecheck, formatting, and root/project production builds passed. No database/API semantics changed.
+
+## Open Library search indicator
+
+The search field now replaces its magnifying-glass icon with a 20px spinner during debounce, queued, and active searches. A shared pending state drives the input’s busy attribute and the “Searching Open Library…” status, which remains visible after the field loses focus. Error and completed/empty-result messages remain visible, with retry still available. Normal-motion browsers rotate the spinner; reduced-motion browsers retain the static indicator and status text.
+
+Validation: 66 unit/component/service tests and all 14 desktop/mobile production browser checks passed at the domain root. The new browser regression verifies actual transform changes during a held Open Library request, continued visibility after blur, reduced-motion behaviour, accessibility, failure cleanup, and successful retry. Lint, typecheck, formatting, and root/project production builds passed. No database/API request semantics changed.
+
+## Add quote navigation
+
+The Add quote editor is now included in initial application code. Its first navigation no longer depends on downloading a lazy editor chunk. The library page and book picker share a 30-second, user-scoped library cache; repeated navigation reuses a fresh result, while existing quote mutations immediately invalidate it and account changes still clear private data. Public homepage sampling and Open Library request timing are unchanged.
+
+A production browser regression test reproduced the old delay by holding page-code downloads and new library requests: the editor heading failed to appear. With the change, both the page-level Add a quote link and top-bar Add quote link open the editor while those requests remain blocked, without requesting extra JavaScript or refetching a fresh library. This verifies the avoidable client-side wait, not a measured improvement to hosted database latency. The editor code now downloads on initial load instead of the first click.
+
+Validation: 66 unit/component/service tests and all 12 desktop/mobile production browser checks passed at the domain root, including the blocked-download navigation regression and full quote lifecycle. Unit checks cover fresh-cache reuse, quote-mutation invalidation, cache expiry, and account-scoped separation. Lint, typecheck, formatting, and root/project production builds passed. No database schema, permissions, or authentication backend changed; database checks were not repeated for this client change.
+
 ## Loading feedback
 
 The initial HTML now contains a branded startup indicator, visible before application JavaScript and during authentication callbacks. Shared status spinners cover session checks, initial page/database reads, homepage/personal quote loading, library selection, Open Library searches (including debounce and queue waits), selected descriptions, and pending authentication/save/edit/delete/refresh controls. A small, non-blocking activity badge tracks active TanStack Query reads and mutations, including background refetches. The app header/footer remain mounted while lazy page code loads. Existing data remains visible during background requests, write controls retain pending labels and disable duplicate submissions, and reduced-motion preferences stop spinner rotation.

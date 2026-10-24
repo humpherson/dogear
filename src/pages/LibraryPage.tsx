@@ -1,18 +1,21 @@
+import { prefetchBook } from '../features/library/prefetchBook';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, BookOpen } from 'lucide-react';
-import { getLibrary } from '../services/libraryService';
+import {
+  libraryQueryOptions,
+  heroQueryOptions,
+} from '../features/library/libraryQuery';
 import { Cover } from '../components/books/BookDetails';
 import { useAuth } from '../features/auth/AuthProvider';
 import { message } from '../lib/validation';
 import { LibraryQuoteHero } from '../components/quotes/LibraryQuoteHero';
 export function LibraryPage() {
   const { session } = useAuth();
-  const query = useQuery({
-    queryKey: ['private', session?.user.id, 'library'],
-    queryFn: getLibrary,
-  });
+  const client = useQueryClient();
+  const query = useQuery(libraryQueryOptions(session?.user.id));
+  useQuery(heroQueryOptions(session?.user.id));
   return (
     <div className="library-page">
       {!!query.data?.length && (
@@ -41,12 +44,12 @@ export function LibraryPage() {
 
         {query.isPending ? (
           <LoadingIndicator>Gathering your books…</LoadingIndicator>
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <div role="alert">
             {message(query.error)}{' '}
             <button onClick={() => void query.refetch()}>Try again</button>
           </div>
-        ) : !query.data.length ? (
+        ) : !query.data?.length ? (
           <section className="empty">
             <BookOpen size={42} />
             <h2>Your first dogeard is waiting.</h2>
@@ -65,6 +68,13 @@ export function LibraryPage() {
                 className="book-card"
                 key={entry.id}
                 to={`/books/${entry.id}`}
+                onMouseEnter={() =>
+                  prefetchBook(client, session?.user.id, entry.id)
+                }
+                onFocus={() => prefetchBook(client, session?.user.id, entry.id)}
+                onTouchStart={() =>
+                  prefetchBook(client, session?.user.id, entry.id)
+                }
               >
                 <div className="book-stage">
                   <Cover book={entry.books} large />

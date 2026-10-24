@@ -46,11 +46,15 @@ Install the browser once with `npx playwright install chromium` (`--with-deps` o
 
 ## Product behavior and architecture
 
-- Loading feedback starts in the initial HTML, before JavaScript or authentication completes. Shared spinners label database reads, Open Library searches/descriptions, saves, deletes, and authentication actions. A small activity badge also covers background query refetches and mutations. Page navigation retains the app header/footer while its code loads; existing content stays visible during background reads. Indicators respect reduced motion and never imply completion before a request succeeds.
+- Loading feedback starts in the initial HTML, before JavaScript or authentication completes. Shared spinners label database reads, Open Library searches/descriptions, saves, deletes, and authentication actions. A small activity badge also covers background query refetches and mutations. Page navigation retains the app header/footer while its code loads; existing content stays visible during background reads. The book-search icon becomes a rotating spinner while a search is pending, with status text that remains visible after focus leaves the field. Indicators respect reduced motion and never imply completion before a request succeeds.
+
+- The sign-in, registration, and password-recovery screens are included in initial application code, so the header Sign in link opens without a separate page-code download.
 
 - Signed-in navigation offers Library, Add quote, and Sign out. Settings is hidden for now; existing settings URLs redirect to the library. Successful sign-out returns to the sign-in screen from any page.
 
 - The signed-out homepage requests one random, attributed quote from **all user-added quotations**, including existing and future saves. Quote text and book attribution can be public. Notes, page references, account details, and library membership remain private. Random selections may repeat; there is no separate editorial pool or opt-in flag.
+
+- Add quote is included in the initial application code so clicking it does not wait for an editor download. Library pages and the book picker share a 30-second, user-scoped cache to avoid redundant reads during navigation; confirmed quote mutations update it immediately.
 
 - The top-bar Add quote page lets users choose an existing library book, filter saved books by title/author, or search Open Library for a new one. The choices sit in a single-open accordion: library selection opens by default when books are available; new-book search opens for an empty library. Choosing a saved book uses stored metadata and does not call Open Library.
 - Signed-in libraries show a full-width personal quote hero above the library heading, Add quote button, and book grid. Refresh selects another of that user’s quotes and avoids the current quote when another is available. A single-quote library shows its quote with Refresh disabled; an empty library keeps its existing call to action. This owner-only RPC is separate from the public homepage sampler and uses RLS plus `auth.uid()`.
@@ -62,6 +66,23 @@ Install the browser once with `npx playwright install chromium` (`--with-deps` o
 - SQL migrations in `supabase/migrations/` define RLS, relational ownership, profile provisioning, and the `save_quote_with_book` / `delete_quote` RPCs. Create/delete operations use a transaction lock per user and catalog book, preventing races around the last quote. Direct library writes and quote inserts/deletes are denied; only quote content fields can be updated directly by the owner.
 - RPCs run with explicitly restricted privileges and derive the caller from `auth.uid()`. They validate bounded metadata and HTTPS cover URLs. Metadata originates from a public browser API and is not a publisher-verified catalog.
 - React renders descriptions and quotations as text. Open Library descriptions are normalized without raw HTML rendering. Cover failures use a placeholder.
+
+## Navigation performance and mutation results
+
+Library lists fetch compact book summaries rather than descriptions and ISBNs. Full metadata loads from Supabase only when opening or selecting a saved book; legacy Google records are supported and no Open Library call is needed for saved selections. Book views show cached summaries immediately while full details and quotes load independently. Fresh full details are reused for 60 seconds; library summaries, quote lists, and the personal hero use a 30-second freshness window. Private keys include the user ID and identity changes still clear caches.
+
+The personal hero starts in parallel with the library read and retains its selection across short navigation trips. Refresh always requests another eligible personal quote. Book-card hover, focus, or touch preloads page code, book details, and quotes, with query deduplication and freshness checks. Library navigation also preloads its page code on intent. Cover images in grids/pickers use native lazy loading, asynchronous decoding, and explicit dimensions; the opened book’s main cover loads eagerly.
+
+Confirmed quote mutations update the affected caches immediately. Edits return canonical quote rows. Additive RPCs `save_quote_with_book_result` and `delete_quote_result` return canonical saved records or the remaining count while invoking the existing ownership-checked, transaction-locked functions. Reconciliation runs in the background and does not delay navigation or closing editors/dialogs. Complete confirmed quote lists and full book metadata are reused without an immediate redundant read.
+
+**Before deploying this frontend to an existing hosted project**, apply pending migrations, including `202610240006_quote_results.sql`:
+
+```sh
+npx supabase db push --dry-run
+npx supabase db push
+```
+
+For an existing local database use `npx supabase migration up --local`, then regenerate types with `npm run db:types`. No data reset is required. Original save/delete RPCs remain available for compatibility with older clients; public homepage sampling and existing RLS remain unchanged.
 
 ## Public homepage quotes
 

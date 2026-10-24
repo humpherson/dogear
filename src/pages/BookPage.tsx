@@ -1,9 +1,13 @@
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getBook, getQuotes } from '../services/libraryService';
 import { useAuth } from '../features/auth/AuthProvider';
+import {
+  bookQueryOptions,
+  quotesQueryOptions,
+  cachedBook,
+} from '../features/library/libraryQuery';
 import { BookDetails } from '../components/books/BookDetails';
 import { QuoteCard } from '../components/quotes/QuoteCard';
 import { message } from '../lib/validation';
@@ -11,32 +15,24 @@ export function BookPage() {
   const { userBookId = '' } = useParams(),
     { session } = useAuth(),
     navigate = useNavigate();
+  const client = useQueryClient();
   const [filter, setFilter] = useState('');
-  const book = useQuery({
-    queryKey: ['private', session?.user.id, 'book', userBookId],
-    queryFn: () => getBook(userBookId),
-  });
-  const quotes = useQuery({
-    queryKey: ['private', session?.user.id, 'quotes', userBookId],
-    queryFn: () => getQuotes(userBookId),
-  });
-  if (book.isPending || quotes.isPending)
+  const book = useQuery(bookQueryOptions(session?.user.id, userBookId));
+  const quotes = useQuery(quotesQueryOptions(session?.user.id, userBookId));
+  const entry =
+    book.isSuccess && !book.data
+      ? null
+      : (book.data ?? cachedBook(client, session?.user.id, userBookId));
+  if (!entry && book.isPending)
     return <LoadingIndicator>Opening your book…</LoadingIndicator>;
-  if (book.isError || quotes.isError)
+  if (!entry && book.isError)
     return (
       <div role="alert">
-        {message(book.error || quotes.error)}{' '}
-        <button
-          onClick={() => {
-            void book.refetch();
-            void quotes.refetch();
-          }}
-        >
-          Try again
-        </button>
+        {message(book.error)}{' '}
+        <button onClick={() => void book.refetch()}>Try again</button>
       </div>
     );
-  if (!book.data)
+  if (!entry)
     return (
       <section className="empty">
         <h1>Book not found</h1>
@@ -44,23 +40,37 @@ export function BookPage() {
         <Link to="/library">Return to your library</Link>
       </section>
     );
-  const visible = quotes.data.filter((q) =>
-    q.text.toLowerCase().includes(filter.toLowerCase()),
+  const visible = quotes.data?.filter((quote) =>
+    quote.text.toLowerCase().includes(filter.toLowerCase()),
   );
   return (
     <>
       <Link className="back-link" to="/library">
         ← Your library
       </Link>
-      <BookDetails book={book.data.books} />
+      <BookDetails book={entry.books} />
+      {book.isPending && (
+        <LoadingIndicator>Loading book details…</LoadingIndicator>
+      )}
+      {book.isError && (
+        <p role="alert">
+          {message(book.error)}{' '}
+          <button className="text-button" onClick={() => void book.refetch()}>
+            Retry details
+          </button>
+        </p>
+      )}
       <div className="page-heading">
         <h1 className="section-title">
-          Your quotes <span className="muted">({quotes.data.length})</span>
+          Your quotes{' '}
+          <span className="muted">
+            ({entry.quotes[0]?.count ?? quotes.data?.length ?? 0})
+          </span>
         </h1>
         <Link
           className="button"
           to="/quotes/new"
-          state={{ book: book.data.books }}
+          state={{ book: entry.books, userBookId }}
         >
           Add another quote
         </Link>
@@ -69,23 +79,33 @@ export function BookPage() {
       <input
         id="quote-filter"
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
+        onChange={(event) => setFilter(event.target.value)}
         placeholder="Find a word or phrase…"
       />
-      {visible.length ? (
+      {quotes.isPending && (
+        <LoadingIndicator>Loading your quotes…</LoadingIndicator>
+      )}
+      {quotes.isError && (
+        <p role="alert">
+          {message(quotes.error)}{' '}
+          <button className="text-button" onClick={() => void quotes.refetch()}>
+            Retry quotes
+          </button>
+        </p>
+      )}
+      {visible?.length ? (
         visible.map((quote) => (
           <QuoteCard
             key={quote.id}
             quote={quote}
-            onDeleted={() => {
-              if (quotes.data.length <= 1)
-                navigate('/library', { replace: true });
+            onDeleted={(remaining) => {
+              if (remaining === 0) navigate('/library', { replace: true });
             }}
           />
         ))
-      ) : (
+      ) : quotes.isSuccess ? (
         <p>No quotes match your filter.</p>
-      )}
+      ) : null}
     </>
   );
 }

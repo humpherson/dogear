@@ -440,6 +440,106 @@ try {
   } finally {
     await admin.from('books').delete().eq('source_id', legacyBook.source_id);
   }
+  const responseBook = {
+    ...book,
+    source_id: book.source_id.replace('W', '99W'),
+  };
+  try {
+    const result = await a.client.rpc('save_quote_with_book_result', {
+      book: responseBook,
+      quote: {
+        text: 'Canonical saved words',
+        note: 'Private note',
+        page_number: '1',
+      },
+    });
+    assert.ifError(result.error);
+    const row = result.data[0];
+    check(
+      row.quote_record.user_id === a.id && row.library_entry.user_id === a.id,
+      'save result returns only the caller’s confirmed records',
+    );
+    check(
+      row.quote_record.text === 'Canonical saved words' &&
+        row.quote_record.note === 'Private note',
+      'save result contains canonical quote fields',
+    );
+    check(
+      row.library_entry.quotes[0].count === 1 &&
+        row.library_entry.books.title === responseBook.title,
+      'save result contains the canonical book and count',
+    );
+    const repeated = await a.client.rpc('save_quote_with_book_result', {
+      book: { ...responseBook, title: 'Attempted replacement' },
+      quote: { text: 'Another canonical quote' },
+    });
+    assert.ifError(repeated.error);
+    check(
+      repeated.data[0].library_entry.books.title === responseBook.title &&
+        repeated.data[0].library_entry.quotes[0].count === 2,
+      'save result preserves immutable catalog metadata and current count',
+    );
+    check(
+      !!(
+        await b.client.rpc('delete_quote_result', {
+          quote_id: row.quote_record.id,
+        })
+      ).error,
+      'result delete rejects cross-user access',
+    );
+    check(
+      !!(
+        await anon.rpc('save_quote_with_book_result', {
+          book: responseBook,
+          quote: { text: 'Denied' },
+        })
+      ).error,
+      'anonymous save-result RPC denied',
+    );
+    check(
+      !!(
+        await anon.rpc('delete_quote_result', { quote_id: row.quote_record.id })
+      ).error,
+      'anonymous delete-result RPC denied',
+    );
+    const removed = await a.client.rpc('delete_quote_result', {
+      quote_id: row.quote_record.id,
+    });
+    assert.ifError(removed.error);
+    check(
+      removed.data[0].remaining_count === 1 &&
+        removed.data[0].user_book_id === row.library_entry.id,
+      'delete result returns the confirmed remaining count',
+    );
+    const last = await a.client.rpc('delete_quote_result', {
+      quote_id: repeated.data[0].quote_record.id,
+    });
+    assert.ifError(last.error);
+    check(
+      last.data[0].remaining_count === 0,
+      'last delete returns zero remaining quotes',
+    );
+    check(
+      (
+        await a.client
+          .from('user_books')
+          .select('id')
+          .eq('id', row.library_entry.id)
+      ).data.length === 0,
+      'result delete preserves last-quote cleanup',
+    );
+    check(
+      !!(
+        await a.client.rpc('save_quote_with_book_result', {
+          book: responseBook,
+          quote: { text: ' ' },
+        })
+      ).error,
+      'save-result RPC retains validation',
+    );
+  } finally {
+    await admin.from('books').delete().eq('source_id', responseBook.source_id);
+  }
   console.log(`${checks} database checks passed.`);
 } finally {
   for (const id of users) await admin.auth.admin.deleteUser(id);

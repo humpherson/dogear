@@ -1,3 +1,4 @@
+import { heroQueryOptions, heroKey } from '../../features/library/libraryQuery';
 import { LoadingIndicator, Spinner } from '../ui/LoadingIndicator';
 import { useId } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,14 +11,8 @@ export function LibraryQuoteHero({ quoteCount }: { quoteCount: number }) {
   const { session } = useAuth();
   const client = useQueryClient();
   const id = useId();
-  const queryKey = ['private', session?.user.id, 'library-hero'];
-  const query = useQuery({
-    queryKey,
-    queryFn: ({ signal }) => getRandomLibraryQuote(null, signal),
-    enabled: !!session,
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  const queryKey = heroKey(session?.user.id);
+  const query = useQuery(heroQueryOptions(session?.user.id));
   function refresh() {
     void client
       .fetchQuery({

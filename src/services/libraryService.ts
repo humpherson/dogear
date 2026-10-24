@@ -1,28 +1,46 @@
 import { db } from '../lib/supabase';
-import type { LibraryBook, Quote } from '../types';
-export async function getLibrary() {
-  const { data, error } = await db()
+import type { LibraryBook, LibrarySummary, Quote } from '../types';
+export const libraryProjection =
+  'id,user_id,book_id,created_at,books(id,source,source_id,title,authors,published_date,cover_url),quotes(count)';
+export async function getLibrary(
+  signal?: AbortSignal,
+): Promise<LibrarySummary[]> {
+  const request = db()
     .from('user_books')
-    .select('*, books(*), quotes(count)')
+    .select(libraryProjection)
     .order('created_at', { ascending: false });
+  const { data, error } = await (signal
+    ? request.abortSignal(signal)
+    : request);
   if (error) throw error;
-  return data as unknown as LibraryBook[];
+  return data as unknown as LibrarySummary[];
 }
-export async function getBook(id: string) {
-  const { data, error } = await db()
+export async function getBook(
+  id: string,
+  signal?: AbortSignal,
+): Promise<LibraryBook | null> {
+  const request = db()
     .from('user_books')
-    .select('*, books(*), quotes(count)')
-    .eq('id', id)
-    .maybeSingle();
+    .select('id,user_id,book_id,created_at,books(*),quotes(count)')
+    .eq('id', id);
+  const { data, error } = await (
+    signal ? request.abortSignal(signal) : request
+  ).maybeSingle();
   if (error) throw error;
   return data as unknown as LibraryBook | null;
 }
-export async function getQuotes(id: string): Promise<Quote[]> {
-  const { data, error } = await db()
+export async function getQuotes(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Quote[]> {
+  const request = db()
     .from('quotes')
     .select('*')
     .eq('user_book_id', id)
     .order('created_at', { ascending: false });
+  const { data, error } = await (signal
+    ? request.abortSignal(signal)
+    : request);
   if (error) throw error;
   return data;
 }

@@ -180,6 +180,13 @@ export type Database = {
     };
     Functions: {
       delete_quote: { Args: { quote_id: string }; Returns: undefined };
+      delete_quote_result: {
+        Args: { quote_id: string };
+        Returns: {
+          remaining_count: number;
+          user_book_id: string;
+        }[];
+      };
       get_random_homepage_quote: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -205,6 +212,13 @@ export type Database = {
         Returns: {
           quote_id: string;
           user_book_id: string;
+        }[];
+      };
+      save_quote_with_book_result: {
+        Args: { book: Json; quote: Json };
+        Returns: {
+          library_entry: Json;
+          quote_record: Json;
         }[];
       };
     };

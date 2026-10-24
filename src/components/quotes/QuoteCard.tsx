@@ -1,3 +1,8 @@
+import { useAuth } from '../../features/auth/AuthProvider';
+import {
+  cacheEditedQuote,
+  cacheDeletedQuote,
+} from '../../features/library/quoteCache';
 import { Spinner } from '../ui/LoadingIndicator';
 import { useState } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
@@ -11,24 +16,26 @@ export function QuoteCard({
   onDeleted,
 }: {
   quote: Quote;
-  onDeleted: () => void;
+  onDeleted: (remainingCount: number) => void;
 }) {
   const [editing, setEditing] = useState(false),
     [confirm, setConfirm] = useState(false);
   const client = useQueryClient();
+  const { session } = useAuth();
+  const userId = session!.user.id;
   const edit = useMutation({
     mutationFn: (input: QuoteInput) => editQuote(quote.id, input),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ['private'] });
+    onSuccess: async (updated) => {
+      await cacheEditedQuote(client, userId, updated);
       setEditing(false);
     },
   });
   const remove = useMutation({
     mutationFn: () => deleteQuote(quote.id),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ['private'] });
+    onSuccess: async (result) => {
+      await cacheDeletedQuote(client, userId, quote.id, result);
       setConfirm(false);
-      onDeleted();
+      onDeleted(result.remaining_count);
     },
   });
   return (

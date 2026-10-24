@@ -32,3 +32,18 @@ export type LibraryBook = {
   books: Book;
   quotes: { count: number }[];
 };
+export type BookSummary = Pick<
+  Book,
+  | 'id'
+  | 'source'
+  | 'source_id'
+  | 'title'
+  | 'authors'
+  | 'published_date'
+  | 'cover_url'
+> &
+  Partial<Book>;
+export type LibrarySummary = Omit<LibraryBook, 'books'> & {
+  books: BookSummary;
+};
+export type SelectedBook = BookSearchResult | BookSummary;

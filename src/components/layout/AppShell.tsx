@@ -1,3 +1,4 @@
+import { loadLibraryPage } from '../../app/pageLoaders';
 import { Suspense } from 'react';
 import { LoadingIndicator, Spinner } from '../ui/LoadingIndicator';
 import { RequestActivity } from './RequestActivity';
@@ -35,7 +36,16 @@ export function AppShell() {
         <nav aria-label="Main navigation">
           {session ? (
             <>
-              <NavLink to="/library">
+              <NavLink
+                to="/library"
+                onMouseEnter={() =>
+                  void loadLibraryPage().catch(() => undefined)
+                }
+                onFocus={() => void loadLibraryPage().catch(() => undefined)}
+                onTouchStart={() =>
+                  void loadLibraryPage().catch(() => undefined)
+                }
+              >
                 <BookOpen size={18} />
                 Library
               </NavLink>

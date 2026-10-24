@@ -70,7 +70,7 @@ it('filters saved books locally and selects a legacy book with its catalog ID in
   expect(choice).toHaveTextContent('2 quotes kept');
   choice.focus();
   await user.keyboard('{Enter}');
-  expect(select).toHaveBeenCalledWith(entry.books);
+  expect(select).toHaveBeenCalledWith(entry.books, entry.id);
   expect(search).not.toHaveBeenCalled();
 });
 it('keeps external search available for an empty library', async () => {

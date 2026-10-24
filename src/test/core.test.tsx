@@ -21,6 +21,9 @@ import * as library from '../services/libraryService';
 import * as quotes from '../services/quotesService';
 import * as libraryQuotes from '../services/libraryQuotesService';
 const server = setupServer();
+beforeEach(() =>
+  vi.spyOn(libraryQuotes, 'getRandomLibraryQuote').mockResolvedValue(null),
+);
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   server.resetHandlers();
@@ -326,7 +329,9 @@ describe('library and quote interactions', () => {
     updated_at: '2026-01-01T00:00:00Z',
   };
   it('persists an edit before closing the form', async () => {
-    const edit = vi.spyOn(quotes, 'editQuote').mockResolvedValue({ id: 'q' });
+    const edit = vi
+      .spyOn(quotes, 'editQuote')
+      .mockResolvedValue({ ...quote, text: 'Updated words' });
     providers(<QuoteCard quote={quote} onDeleted={vi.fn()} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -363,7 +368,10 @@ describe('library and quote interactions', () => {
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
   it('notifies the page only after a confirmed deletion', async () => {
-    vi.spyOn(quotes, 'deleteQuote').mockResolvedValue(undefined);
+    vi.spyOn(quotes, 'deleteQuote').mockResolvedValue({
+      user_book_id: 'ub',
+      remaining_count: 0,
+    });
     const deleted = vi.fn();
     providers(<QuoteCard quote={quote} onDeleted={deleted} />);
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));

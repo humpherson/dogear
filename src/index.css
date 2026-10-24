@@ -632,11 +632,22 @@ button.library-book-choice:focus-visible {
 .search-field {
   position: relative;
 }
-.search-field > svg {
+.search-field-icon {
   position: absolute;
   left: 13px;
   top: 16px;
-  color: #68685d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-forest);
+  pointer-events: none;
+}
+.search-field-icon .spinner {
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
 }
 .search-field input {
   padding-left: 43px;

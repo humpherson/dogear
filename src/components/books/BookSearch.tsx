@@ -29,6 +29,11 @@ export function BookSearch({
     retry: false,
   });
   const current = input.trim() === term;
+  const searching = input.trim().length >= 3 && (!current || query.isFetching);
+  const showStatus =
+    open ||
+    searching ||
+    (current && term.length >= 3 && (query.isSuccess || query.isError));
   const results = current ? query.data || [] : [];
   function choose(book: BookSearchResult) {
     onSelect(book);
@@ -44,11 +49,15 @@ export function BookSearch({
     >
       <label htmlFor={id}>Find a book</label>
       <div className="search-field">
-        <Search size={20} aria-hidden="true" />
+        <span className="search-field-icon" aria-hidden="true">
+          {searching ? <Spinner /> : <Search size={20} />}
+        </span>
         <input
           id={id}
           role="combobox"
           aria-autocomplete="list"
+          aria-busy={searching}
+          aria-describedby={showStatus ? `${id}-status` : undefined}
           aria-expanded={open && results.length > 0}
           aria-controls={`${id}-results`}
           aria-activedescendant={
@@ -86,19 +95,18 @@ export function BookSearch({
           }}
         />
       </div>
-      {open && (
+      {showStatus && (
         <>
-          <p className="muted loading-indicator" role="status">
-            {input.trim().length >= 3 && (!current || query.isFetching) && (
-              <Spinner />
-            )}
+          <p id={`${id}-status`} className="muted" role="status">
             {input.trim().length < 3
               ? 'Enter at least 3 characters.'
-              : !current || query.isFetching
-                ? 'Searching books…'
-                : !query.isError && !results.length
-                  ? 'No books found. Try another title or author.'
-                  : `${results.length} books found.`}
+              : searching
+                ? 'Searching Open Library…'
+                : query.isError
+                  ? 'Search couldn’t be completed.'
+                  : !results.length
+                    ? 'No books found. Try another title or author.'
+                    : `${results.length} books found.`}
           </p>
           {query.isError && current && (
             <div role="alert">

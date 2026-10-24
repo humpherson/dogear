@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { BookOpen } from 'lucide-react';
-import type { BookSearchResult } from '../../types';
+import type { BookSearchResult, BookSummary } from '../../types';
 export function Cover({
   book,
   large = false,
+  priority = false,
 }: {
-  book: BookSearchResult;
+  book: Pick<BookSearchResult, 'title' | 'cover_url'>;
+  priority?: boolean;
   large?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
@@ -13,6 +15,10 @@ export function Cover({
     <img
       className={large ? 'cover large' : 'cover'}
       src={book.cover_url}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      width={large ? 180 : 46}
+      height={large ? 270 : 68}
       alt={`Cover of ${book.title}`}
       onError={() => setFailed(true)}
       referrerPolicy="no-referrer"
@@ -27,10 +33,14 @@ export function Cover({
     </div>
   );
 }
-export function BookDetails({ book }: { book: BookSearchResult }) {
+export function BookDetails({
+  book,
+}: {
+  book: BookSearchResult | BookSummary;
+}) {
   return (
     <section className="book-details">
-      <Cover key={book.source_id} book={book} large />
+      <Cover key={book.source_id} book={book} large priority />
       <div>
         <p className="eyebrow">Your next dogeard</p>
         <h2>{book.title}</h2>

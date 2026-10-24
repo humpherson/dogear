@@ -1,3 +1,4 @@
+import { savedFixture } from './fixtures';
 import { beforeEach, expect, it, vi } from 'vitest';
 const rpc = vi.fn(),
   from = vi.fn();
@@ -17,13 +18,13 @@ const book = {
 beforeEach(() => vi.resetAllMocks());
 it('sends one validated atomic save and returns authoritative IDs', async () => {
   rpc.mockResolvedValue({
-    data: [{ quote_id: 'q', user_book_id: 'ub' }],
+    data: [savedFixture(book)],
     error: null,
   });
   expect(
     await saveQuote(book, { text: ' hello ', page_number: 'xiv', note: '' }),
-  ).toEqual({ quote_id: 'q', user_book_id: 'ub' });
-  expect(rpc).toHaveBeenCalledWith('save_quote_with_book', {
+  ).toEqual(savedFixture(book));
+  expect(rpc).toHaveBeenCalledWith('save_quote_with_book_result', {
     book,
     quote: { text: 'hello', page_number: 'xiv', note: '' },
   });

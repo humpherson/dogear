@@ -1,3 +1,6 @@
+import { bookQueryOptions } from '../features/library/libraryQuery';
+import { cacheSavedQuote } from '../features/library/quoteCache';
+import { useAuth } from '../features/auth/AuthProvider';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -5,15 +8,27 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookPicker } from '../components/books/BookPicker';
 import { BookDetails } from '../components/books/BookDetails';
 import { QuoteForm } from '../components/quotes/QuoteForm';
-import type { BookSearchResult } from '../types';
+import type { BookSearchResult, SelectedBook } from '../types';
 import { getBookDescription } from '../services/booksApi';
 import { saveQuote } from '../services/quotesService';
 import { message, type QuoteInput } from '../lib/validation';
 export function AddQuotePage() {
   const location = useLocation();
-  const [book, setBook] = useState<BookSearchResult | null>(
+  const [book, setBook] = useState<SelectedBook | null>(
     location.state?.book || null,
   );
+  const [selectedUserBookId, setSelectedUserBookId] = useState<
+    string | undefined
+  >(location.state?.userBookId);
+  const { session } = useAuth();
+  const needsSavedDetails =
+    !!book &&
+    !!selectedUserBookId &&
+    !('description' in book && 'isbn_10' in book && 'isbn_13' in book);
+  const savedDetails = useQuery({
+    ...bookQueryOptions(session?.user.id, selectedUserBookId || ''),
+    enabled: !!session && needsSavedDetails,
+  });
   const navigate = useNavigate(),
     client = useQueryClient();
   const needsDescription = book?.source === 'open_library' && !('id' in book);
@@ -26,17 +41,20 @@ export function AddQuotePage() {
     retry: false,
   });
   const selectedBook =
-    book && needsDescription && description.isSuccess
+    savedDetails.data?.books ??
+    (book && needsDescription && description.isSuccess
       ? { ...book, description: description.data }
-      : book;
+      : book);
   const mutation = useMutation({
     mutationFn: (input: QuoteInput) => {
       if (!book) throw new Error('Select a book first.');
-      return saveQuote(selectedBook!, input);
+      if (needsSavedDetails && !savedDetails.data)
+        throw new Error('Load the saved book details before saving.');
+      return saveQuote(selectedBook as BookSearchResult, input);
     },
     onSuccess: async (result) => {
-      await client.invalidateQueries({ queryKey: ['private'] });
-      navigate(`/books/${result.user_book_id}`);
+      await cacheSavedQuote(client, session!.user.id, result);
+      navigate(`/books/${result.library_entry.id}`);
     },
   });
   return (
@@ -57,6 +75,28 @@ export function AddQuotePage() {
           {book ? (
             <>
               <BookDetails book={selectedBook!} />
+              {needsSavedDetails && savedDetails.isPending && (
+                <LoadingIndicator>Loading saved book details…</LoadingIndicator>
+              )}
+              {needsSavedDetails &&
+                savedDetails.isSuccess &&
+                !savedDetails.data && (
+                  <p role="alert">
+                    This book is no longer in your library. Choose a different
+                    book to continue.
+                  </p>
+                )}
+              {needsSavedDetails && savedDetails.isError && (
+                <p role="alert">
+                  We couldn’t load this saved book.{' '}
+                  <button
+                    className="text-button"
+                    onClick={() => void savedDetails.refetch()}
+                  >
+                    Retry book details
+                  </button>
+                </p>
+              )}
               {needsDescription && description.isPending && (
                 <LoadingIndicator>Loading book description…</LoadingIndicator>
               )}
@@ -77,6 +117,7 @@ export function AddQuotePage() {
                 disabled={mutation.isPending}
                 onClick={() => {
                   setBook(null);
+                  setSelectedUserBookId(undefined);
                   mutation.reset();
                 }}
               >
@@ -84,7 +125,12 @@ export function AddQuotePage() {
               </button>
             </>
           ) : (
-            <BookPicker onSelect={setBook} />
+            <BookPicker
+              onSelect={(selected, id) => {
+                setBook(selected);
+                setSelectedUserBookId(id);
+              }}
+            />
           )}
         </section>
         <section className="paper-panel">
@@ -94,8 +140,10 @@ export function AddQuotePage() {
               onSubmit={(values) => mutation.mutate(values)}
               pending={
                 mutation.isPending ||
+                (needsSavedDetails && savedDetails.isPending) ||
                 (!!needsDescription && description.isPending)
               }
+              disabled={needsSavedDetails && !savedDetails.data}
               pendingLabel={mutation.isPending ? 'Saving…' : 'Loading book…'}
               error={mutation.isError ? message(mutation.error) : undefined}
             />

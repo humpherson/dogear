@@ -1,3 +1,6 @@
+import { loadLibraryPage, loadBookPage } from './pageLoaders';
+import { AuthPage } from '../pages/AuthPage';
+import { AddQuotePage } from '../pages/AddQuotePage';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { lazy } from 'react';
 import { HashRouter, Navigate, Route, Routes, Link } from 'react-router-dom';
@@ -6,22 +9,8 @@ import { AuthProvider, useAuth } from '../features/auth/AuthProvider';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { AppShell } from '../components/layout/AppShell';
 import { LandingPage } from '../pages/LandingPage';
-const AuthPage = lazy(() =>
-  import('../pages/AuthPage').then((module) => ({ default: module.AuthPage })),
-);
-const LibraryPage = lazy(() =>
-  import('../pages/LibraryPage').then((module) => ({
-    default: module.LibraryPage,
-  })),
-);
-const AddQuotePage = lazy(() =>
-  import('../pages/AddQuotePage').then((module) => ({
-    default: module.AddQuotePage,
-  })),
-);
-const BookPage = lazy(() =>
-  import('../pages/BookPage').then((module) => ({ default: module.BookPage })),
-);
+const LibraryPage = lazy(loadLibraryPage);
+const BookPage = lazy(loadBookPage);
 import { config } from '../lib/env';
 const client = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

@@ -1,3 +1,5 @@
+import { summarise } from '../features/library/quoteCache';
+import { savedFixture } from './fixtures';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,7 +11,7 @@ import * as library from '../services/libraryService';
 import { AddQuotePage } from '../pages/AddQuotePage';
 import * as api from '../services/booksApi';
 import * as quotes from '../services/quotesService';
-import type { BookSearchResult } from '../types';
+import type { BookSearchResult, SelectedBook } from '../types';
 const book: BookSearchResult = {
   source: 'open_library',
   source_id: 'OL1W',
@@ -22,7 +24,7 @@ const book: BookSearchResult = {
   isbn_13: null,
 };
 afterEach(() => vi.restoreAllMocks());
-function renderPage(selected: BookSearchResult | null = book) {
+function renderPage(selected: SelectedBook | null = book, userBookId?: string) {
   return render(
     <QueryClientProvider
       client={
@@ -39,7 +41,7 @@ function renderPage(selected: BookSearchResult | null = book) {
       >
         <MemoryRouter
           initialEntries={[
-            { pathname: '/quotes/new', state: { book: selected } },
+            { pathname: '/quotes/new', state: { book: selected, userBookId } },
           ]}
         >
           <Routes>
@@ -61,7 +63,7 @@ it('loads a selected description without erasing entered quote text', async () =
   );
   const save = vi
     .spyOn(quotes, 'saveQuote')
-    .mockResolvedValue({ quote_id: 'q', user_book_id: 'ub' });
+    .mockResolvedValue(savedFixture(book));
   renderPage();
   await waitFor(() => expect(api.getBookDescription).toHaveBeenCalled());
   await userEvent.type(
@@ -91,7 +93,7 @@ it('allows saving search metadata when the optional description fails', async ()
   );
   const save = vi
     .spyOn(quotes, 'saveQuote')
-    .mockResolvedValue({ quote_id: 'q', user_book_id: 'ub' });
+    .mockResolvedValue(savedFixture(book));
   renderPage();
   expect(
     await screen.findByText(/The description couldn’t be loaded/),
@@ -132,7 +134,7 @@ it('saves against a selected library book without fetching external metadata', a
   const search = vi.spyOn(api, 'searchBooks');
   const save = vi
     .spyOn(quotes, 'saveQuote')
-    .mockResolvedValue({ quote_id: 'second', user_book_id: 'ub' });
+    .mockResolvedValue(savedFixture(book, 'second'));
   renderPage(null);
   await userEvent.click(
     await screen.findByRole('button', {
@@ -155,4 +157,60 @@ it('saves against a selected library book without fetching external metadata', a
   });
   expect(description).not.toHaveBeenCalled();
   expect(search).not.toHaveBeenCalled();
+});
+
+it('loads canonical saved-book details on demand and retains typed text through retry', async () => {
+  const response = savedFixture({
+    ...book,
+    description: 'Canonical stored description',
+  });
+  const get = vi
+    .spyOn(library, 'getBook')
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValue(response.library_entry);
+  const external = vi.spyOn(api, 'getBookDescription');
+  const save = vi.spyOn(quotes, 'saveQuote').mockResolvedValue(response);
+  renderPage(summarise(response.library_entry).books, 'ub');
+  await userEvent.type(
+    screen.getByLabelText('The words you want to keep'),
+    'Typed while details load.',
+  );
+  await screen.findByRole('alert');
+  expect(
+    screen.getByRole('button', { name: 'Keep this quote' }),
+  ).toBeDisabled();
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Retry book details' }),
+  );
+  await screen.findByText('Canonical stored description');
+  expect(screen.getByLabelText('The words you want to keep')).toHaveValue(
+    'Typed while details load.',
+  );
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Keep this quote' }),
+  );
+  await screen.findByText('Saved book');
+  expect(get).toHaveBeenCalledTimes(2);
+  expect(external).not.toHaveBeenCalled();
+  expect(save).toHaveBeenCalledWith(
+    response.library_entry.books,
+    expect.objectContaining({ text: 'Typed while details load.' }),
+  );
+});
+
+it('explains a stale saved-book selection without allowing an incomplete save', async () => {
+  const response = savedFixture(book);
+  vi.spyOn(library, 'getBook').mockResolvedValue(null);
+  const save = vi.spyOn(quotes, 'saveQuote');
+  renderPage(summarise(response.library_entry).books, 'ub');
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'This book is no longer in your library',
+  );
+  expect(
+    screen.getByRole('button', { name: 'Keep this quote' }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: 'Choose a different book' }),
+  ).toBeEnabled();
+  expect(save).not.toHaveBeenCalled();
 });
