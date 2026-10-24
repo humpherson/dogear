@@ -406,6 +406,7 @@ try {
     source_id: `legacy_${Date.now()}`,
   };
   assert.ifError((await admin.from('books').insert(legacyBook)).error);
+  const newGoogleId = `new_${Date.now()}`;
   try {
     const legacy = await save(a.client, legacyBook);
     assert.ifError(legacy.error);
@@ -433,12 +434,59 @@ try {
         })
       ).error,
     );
+    const discovered = await save(a.client, {
+      ...legacyBook,
+      source_id: newGoogleId,
+    });
+    assert.ifError(discovered.error);
+    check(
+      !!discovered.data[0].quote_id,
+      'new Google catalogue entries can be saved',
+    );
+    const repeated = await save(a.client, {
+      ...legacyBook,
+      source_id: newGoogleId,
+    });
+    assert.ifError(repeated.error);
+    check(
+      repeated.data[0].user_book_id === discovered.data[0].user_book_id,
+      'new Google saves reuse one library association',
+    );
+    const googleCanonical = await a.client.rpc('save_quote_with_book_result', {
+      book: {
+        ...legacyBook,
+        source_id: newGoogleId,
+        title: 'Attempted rewrite',
+      },
+      quote: { text: 'A Google result' },
+    });
+    assert.ifError(googleCanonical.error);
+    check(
+      googleCanonical.data[0].library_entry.books.title === legacyBook.title &&
+        googleCanonical.data[0].library_entry.books.source === 'google_books',
+      'Google save result preserves immutable canonical metadata and provider',
+    );
     check(
       !!(
-        await save(a.client, { ...legacyBook, source_id: `new_${Date.now()}` })
+        await b.client.rpc('delete_library_quote', {
+          quote_id: discovered.data[0].quote_id,
+        })
       ).error,
-      'new Google catalog entries are rejected',
+      'cross-user Google quote deletion denied',
     );
+    for (const metadata of [
+      { ...legacyBook, source_id: 'invalid id' },
+      {
+        ...legacyBook,
+        source_id: newGoogleId,
+        cover_url: 'javascript:alert(1)',
+      },
+    ]) {
+      check(
+        !!(await save(a.client, metadata)).error,
+        'Google discovery retains metadata validation',
+      );
+    }
     check(
       (
         await a.client
@@ -449,7 +497,10 @@ try {
       'legacy last-quote cleanup still works',
     );
   } finally {
-    await admin.from('books').delete().eq('source_id', legacyBook.source_id);
+    await admin
+      .from('books')
+      .delete()
+      .in('source_id', [legacyBook.source_id, newGoogleId]);
   }
   const responseBook = {
     ...book,

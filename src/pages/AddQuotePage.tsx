@@ -98,9 +98,12 @@ export function AddQuotePage() {
         <section>
           {collection ? (
             <>
-              <CollectionDetails {...collection} />
+              <div className="selected-collection-summary">
+                <CollectionDetails {...collection} />
+              </div>
               {!('id' in collection) && (
-                <>
+                <details className="collection-customise">
+                  <summary>Customise collection</summary>
                   <label htmlFor="new-collection-name">Collection name</label>
                   <input
                     id="new-collection-name"
@@ -117,7 +120,7 @@ export function AddQuotePage() {
                       setCollection({ ...collection, ...appearance })
                     }
                   />
-                </>
+                </details>
               )}
               <button
                 className="text-button"
@@ -208,6 +211,7 @@ export function AddQuotePage() {
                   : book!.source_id
               }
               collection={!!collection}
+              focusOnMount={!!collection}
               onSubmit={(values) => mutation.mutate(values)}
               pending={
                 mutation.isPending ||

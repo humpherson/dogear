@@ -1,10 +1,11 @@
 import { Spinner } from '../ui/LoadingIndicator';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { quoteSchema, type QuoteInput } from '../../lib/validation';
 export function QuoteForm({
   collection = false,
+  focusOnMount = false,
   showCredits = collection,
   initial,
   onSubmit,
@@ -15,6 +16,7 @@ export function QuoteForm({
   pendingLabel = 'Saving…',
 }: {
   collection?: boolean;
+  focusOnMount?: boolean;
   showCredits?: boolean;
   initial?: QuoteInput;
   onSubmit: (data: QuoteInput) => void;
@@ -25,8 +27,10 @@ export function QuoteForm({
   onCancel?: () => void;
 }) {
   const id = useId();
+  const form = useRef<HTMLFormElement>(null);
   const {
     register,
+    setFocus,
     handleSubmit,
     formState: { errors },
   } = useForm<QuoteInput>({
@@ -39,8 +43,16 @@ export function QuoteForm({
       ...initial,
     },
   });
+  useEffect(() => {
+    if (!focusOnMount) return;
+    setFocus('text');
+    form.current
+      ?.querySelector('textarea')
+      ?.scrollIntoView?.({ block: 'center' });
+  }, [focusOnMount, setFocus]);
   return (
     <form
+      ref={form}
       onSubmit={handleSubmit(onSubmit)}
       className="quote-form"
       aria-busy={pending}

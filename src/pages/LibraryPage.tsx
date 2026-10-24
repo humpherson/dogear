@@ -60,7 +60,7 @@ export function LibraryPage() {
               Your library grows one passage at a time.
             </p>
             <Link className="button" to="/quotes/new">
-              Find a book
+              Add a quote
             </Link>
           </section>
         ) : (

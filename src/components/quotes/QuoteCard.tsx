@@ -96,7 +96,7 @@ export function QuoteCard({
               <MoveQuoteDialog quote={quote} book={book} />
               <AlertDialog.Root open={confirm} onOpenChange={setConfirm}>
                 <AlertDialog.Trigger asChild>
-                  <button className="text-button">Delete</button>
+                  <button className="text-button quote-delete">Delete</button>
                 </AlertDialog.Trigger>
                 <AlertDialog.Portal>
                   <AlertDialog.Overlay className="dialog-overlay" />

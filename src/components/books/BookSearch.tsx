@@ -2,7 +2,12 @@ import { Spinner } from '../ui/LoadingIndicator';
 import { useEffect, useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
-import { searchBooks } from '../../services/booksApi';
+import {
+  searchCatalogue,
+  googleBooksEnabled,
+  providerNames,
+  type BookProvider,
+} from '../../services/booksApi';
 import type { BookSearchResult } from '../../types';
 import { Cover } from './BookDetails';
 import { message } from '../../lib/validation';
@@ -16,13 +21,19 @@ export function BookSearch({
     [open, setOpen] = useState(false),
     [active, setActive] = useState(-1);
   const id = useId();
+  const googleAvailable = googleBooksEnabled();
+  const [selectedProvider, setProvider] =
+    useState<BookProvider>('open_library');
+  const provider = googleAvailable ? selectedProvider : 'open_library';
+  const google = provider === 'google_books';
+  const Results = google ? 'div' : 'ul';
   useEffect(() => {
     const timer = setTimeout(() => setTerm(input.trim()), 300);
     return () => clearTimeout(timer);
   }, [input]);
   const query = useQuery({
-    queryKey: ['book-search', 'open_library', term],
-    queryFn: ({ signal }) => searchBooks(term, signal),
+    queryKey: ['book-search', provider, term],
+    queryFn: ({ signal }) => searchCatalogue(term, provider, signal),
     enabled: term.length >= 3,
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -35,6 +46,11 @@ export function BookSearch({
     searching ||
     (current && term.length >= 3 && (query.isSuccess || query.isError));
   const results = current ? query.data || [] : [];
+  function changeProvider(next: BookProvider) {
+    setProvider(next);
+    setActive(-1);
+    setOpen(true);
+  }
   function choose(book: BookSearchResult) {
     onSelect(book);
     setOpen(false);
@@ -47,6 +63,21 @@ export function BookSearch({
         if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
       }}
     >
+      {googleAvailable && (
+        <>
+          <label htmlFor={`${id}-catalogue`}>Book catalogue</label>
+          <select
+            id={`${id}-catalogue`}
+            value={provider}
+            onChange={(event) => {
+              changeProvider(event.target.value as BookProvider);
+            }}
+          >
+            <option value="open_library">Open Library</option>
+            <option value="google_books">Google Books</option>
+          </select>
+        </>
+      )}
       <label htmlFor={id}>Find a book</label>
       <div className="search-field">
         <span className="search-field-icon" aria-hidden="true">
@@ -56,6 +87,7 @@ export function BookSearch({
           id={id}
           role="combobox"
           aria-autocomplete="list"
+          aria-haspopup={google ? 'grid' : 'listbox'}
           aria-busy={searching}
           aria-describedby={showStatus ? `${id}-status` : undefined}
           aria-expanded={open && results.length > 0}
@@ -101,12 +133,12 @@ export function BookSearch({
             {input.trim().length < 3
               ? 'Enter at least 3 characters.'
               : searching
-                ? 'Searching Open Library…'
+                ? `Searching ${providerNames[provider]}…`
                 : query.isError
                   ? 'Search couldn’t be completed.'
                   : !results.length
                     ? 'No books found. Try another title or author.'
-                    : `${results.length} books found.`}
+                    : `${results.length} ${results.length === 1 ? 'book' : 'books'} found.`}
           </p>
           {query.isError && current && (
             <div role="alert">
@@ -118,46 +150,98 @@ export function BookSearch({
               >
                 Retry search
               </button>
+              {google && (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => changeProvider('open_library')}
+                >
+                  Search Open Library instead
+                </button>
+              )}
             </div>
           )}
         </>
       )}
-      <ul
+      <Results
+        className="book-search-results"
         id={`${id}-results`}
-        role="listbox"
-        aria-label="Book results"
+        role={google ? 'grid' : 'listbox'}
+        aria-label={google ? 'Google Books search results' : 'Book results'}
         hidden={!open || !results.length}
       >
-        {results.map((book, i) => (
-          <li
-            id={`${id}-${i}`}
-            role="option"
-            aria-selected={active === i}
-            key={book.source_id}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => choose(book)}
-            className={active === i ? 'selected' : ''}
-          >
-            <Cover book={book} />
-            <div>
-              <strong>{book.title}</strong>
-              <span>
-                {book.authors.join(', ') || 'Unknown author'}
-                {book.published_date
-                  ? ` · ${book.published_date.slice(0, 4)}`
-                  : ''}
-              </span>
+        {results.map((book, i) => {
+          const content = (
+            <>
+              <Cover book={book} />
+              <div className="book-result-text">
+                <strong>{book.title}</strong>
+                <span>
+                  {book.authors.join(', ') || 'Unknown author'}
+                  {book.published_date
+                    ? ` · ${book.published_date.slice(0, 4)}`
+                    : ''}
+                </span>
+              </div>
+            </>
+          );
+          return google ? (
+            <div
+              role="row"
+              aria-selected={active === i}
+              key={book.source_id}
+              className={`google-book-result ${active === i ? 'selected' : ''}`}
+            >
+              <div role="gridcell" id={`${id}-${i}`}>
+                <button
+                  className="book-result-choice"
+                  type="button"
+                  onClick={() => choose(book)}
+                >
+                  {content}
+                </button>
+              </div>
+              <div role="gridcell">
+                <a
+                  className="google-result-link"
+                  href={`https://books.google.com/books?id=${encodeURIComponent(book.source_id)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View {book.title} on Google Books
+                </a>
+              </div>
             </div>
-          </li>
-        ))}
-      </ul>
-      <p className="hint">
-        Books supplied by{' '}
-        <a href="https://openlibrary.org" target="_blank" rel="noreferrer">
-          Open Library
+          ) : (
+            <li
+              id={`${id}-${i}`}
+              role="option"
+              aria-selected={active === i}
+              key={book.source_id}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => choose(book)}
+              className={active === i ? 'selected' : ''}
+            >
+              {content}
+            </li>
+          );
+        })}
+      </Results>
+      {google && (
+        <a
+          className="google-attribution"
+          href="https://books.google.com/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}powered-by-google.png`}
+            alt="Powered by Google"
+            width="62"
+            height="30"
+          />
         </a>
-        . Manual book entry is not available yet.
-      </p>
+      )}
     </div>
   );
 }

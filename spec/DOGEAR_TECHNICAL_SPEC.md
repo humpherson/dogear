@@ -45,7 +45,7 @@ Build a responsive, accessible web application with private notes/account data a
 | Server-state           | TanStack Query                                                                |
 | Icons                  | lucide-react                                                                  |
 | Authentication and DB  | Supabase Auth + PostgreSQL + supabase-js                                      |
-| Book metadata          | Open Library Search, Works, and Covers APIs                                   |
+| Book metadata          | Open Library APIs; optional Google Books API                                  |
 | Tests                  | Vitest + React Testing Library + MSW; Playwright for smoke tests if practical |
 | Formatting and linting | Prettier + ESLint with TypeScript/React rules                                 |
 | Hosting                | GitHub Pages via GitHub Actions                                               |
@@ -102,8 +102,8 @@ Create a profile on signup using a safe database trigger or explicit idempotent 
 ### `books` (shared catalog)
 
 - `id uuid primary key default gen_random_uuid()`
-- `source text not null` (initially `open_library`)
-- `source_id text not null` (Open Library work ID, e.g. `OL66554W`)
+- `source text not null` (`open_library` or `google_books`)
+- `source_id text not null` (Open Library work ID, e.g. `OL66554W`, or Google Books volume ID)
 - `title text not null`
 - `authors text[] not null default '{}'`
 - `description text null` (store plain/sanitized text)
@@ -115,7 +115,7 @@ Create a profile on signup using a safe database trigger or explicit idempotent 
 - `updated_at timestamptz not null default now()`
 - `unique (source, source_id)`
 
-Catalog books are readable by authenticated users. Do not allow arbitrary client updates/deletes of shared metadata. Implement a **narrowly scoped, security-reviewed** catalog upsert mechanism: either an authenticated SQL RPC that validates/normalizes allowed fields and uses `ON CONFLICT (source, source_id)` or another Supabase-supported trusted pathway. Never expose a service-role key to the browser. New catalog records accept only `open_library`; existing `google_books` records remain readable and support additional quotes through the same ownership-checked RPC. Enforce work IDs (`OL` + digits + `W`) for Open Library; enforce size limits and safe URL formats. Catalog upsert must not allow a caller to modify another user's quotes or library.
+Catalog books are readable by authenticated users. Do not allow arbitrary client updates/deletes of shared metadata. Implement a **narrowly scoped, security-reviewed** catalog upsert mechanism: either an authenticated SQL RPC that validates/normalizes allowed fields and uses `ON CONFLICT (source, source_id)` or another Supabase-supported trusted pathway. Never expose a service-role key to the browser. New catalogue records accept `open_library` and `google_books`; existing records from both providers remain readable and support additional quotes through the same ownership-checked RPC. Enforce work IDs (`OL` + digits + `W`) for Open Library; enforce size limits and safe URL formats. Catalog upsert must not allow a caller to modify another user's quotes or library.
 
 ### `user_books`
 
@@ -166,9 +166,10 @@ The signed-out homepage selects at most one random quote from **all actual user-
 
 Implement `src/services/booksApi.ts` and a normalized `BookSearchResult` type. Use `https://openlibrary.org/search.json` with a title/author query, requesting only `key,title,author_name,first_publish_year,cover_i`. Normalize `/works/OL…W` and bare work IDs to `OL…W`. Work IDs identify catalog books; do not infer a particular edition or ISBN from the work. Requirements:
 
-- Search only after 2–3 characters; debounce about 300 ms.
+- Search only after 2–3 characters; debounce about 300 ms. Request `sort=new` for newest first-publication years, then locally put valid-cover results first within the 12 returned matches. Sort each cover/no-cover group newest to oldest, unknown years last, preserving ties. Do not exclude books without covers or issue extra requests for ranking.
 - Request cancellation using AbortController; ignore stale responses.
 - Cache with TanStack Query and avoid excessive calls. Space metadata requests at least 1.1 seconds apart per tab, including selected-work lookups and retries; honor Retry-After. This is not a global per-IP rate limiter.
+- Retry transient HTTP 408/429/500/502/503/504 and network failures up to three total attempts with exponential equal jitter and Retry-After, within a 20-second overall deadline. Cancellation stops queued requests and backoff; permanent errors fail immediately. Serialize request starts rather than response completion to avoid slow-request head-of-line blocking.
 - Fetch `/works/OL…W.json` only after selection for the optional description. Support string and object descriptions; show a recoverable failure and allow saving without a description.
 - Use first-publication year as the date at available precision. Use direct Cover ID URLs under `https://covers.openlibrary.org/b/id/` and link back to Open Library.
 - Show loading, no-results, error, and retry states.
@@ -337,3 +338,19 @@ Each appearance field uses a compact dropdown showing its current colour chip an
 Collection icons use a compact dropdown with labelled icon previews, native radio choices, 44 px tap targets and the same close/focus behaviour as colour dropdowns. Persist one allowlisted icon ID on each private collection: layers (default), music, tv, book, speech, paw-print, user, face-grinning, face-slightly-frowning, star or brush. Creation, edit and move-to-new-collection support the icon choice. Preserve icons on colour-only/name-only edits and preserve the existing icon colour. Existing collections default to layers. The public quote projection is unchanged.
 
 Temporary UI scope: hide the four colour dropdowns on every collection appearance form while retaining the icon picker, colour UI code, validation, storage and rendering. Preserve saved colours when editing names/icons or adding quotes.
+
+## 18. Optional Google Books provider
+
+Retain Open Library as the default and offer a Book catalogue selector when `VITE_GOOGLE_BOOKS_API_KEY` is configured. Google uses volume IDs and a separate cancellable request path; Open Library keeps its work IDs, request spacing and description-on-selection flow. Debounce, labelled loading/error/retry states and provider-scoped caches apply to both. Switching catalogues must hide stale results and cancel old requests. Do not combine results, silently fall back, or relabel existing books.
+
+Google searches request up to 12 relevant books with compact volume metadata, including descriptions, ISBNs and available dates. Treat all data as untrusted, bound fields, render descriptions as plain text, validate IDs/dates/ISBNs, and upgrade safe cover URLs to HTTPS. Selection must not issue a redundant description request. Include Google attribution and prominent per-result/detail source links. Saved metadata continues to use Supabase independently of the active discovery provider.
+
+The Google browser key is optional and public in the static bundle. Keep real values out of source control and restrict the key to Books API and approved website origins. Pass its repository variable into the production build. Migration 010 enables new Google catalogue records without changing quote ownership, canonical metadata immutability or transaction lock ordering. Preserve all Open Library and existing Google records. Automated tests use fake credentials and fixture network responses; live latency requires verification with the configured key and deployed origin.
+
+Google Books resilience: retry transient connection failures and HTTP 408/500/502/503/504 up to three total attempts, using exponential backoff and jitter, respecting Retry-After and a 20-second overall search budget. Cancellation must stop active requests and delay timers. Do not retry permanent key/permission failures or quota errors embedded in a 503 response. Keep query-library retries disabled to prevent layered retry loops. Retain the loading indicator throughout the attempt sequence and offer an explicit Open Library fallback action that preserves the search term and keeps source identity clear.
+
+Current discovery UI scope: expose only Open Library and suppress the catalogue selector even if a Google Books key is configured. Retain Google integration, retry logic, metadata and database compatibility behind a disabled discovery visibility flag for future trials. Existing Google-sourced library records remain usable.
+
+### Responsive collection UI
+
+Valid 120-character unbroken collection names must fit 320, 390, 768 and 1440 px widths without horizontal page scrolling. Clamp library titles to three lines but wrap full detail titles. Keep mobile primary navigation and quote actions at least 44×44 px, with Delete visually separated. Collapse optional collection appearance under “Customise collection”, use a compact mobile selected summary, and focus/scroll to the quotation field after selection. Edit/move dialog actions stay outside the scrolling form body; use a compact edit preview. Escape closes an open nested appearance chooser before dismissing its enclosing dialog and preserves the draft. Colour controls remain hidden; palette contrast changes are deferred. Validate real mobile keyboards and assistive technologies separately from viewport emulation.

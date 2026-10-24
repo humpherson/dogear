@@ -471,7 +471,7 @@ test('book search visibly spins and keeps its status after the field loses focus
   });
   let attempts = 0;
   await page.route('https://openlibrary.org/search.json?*', async (route) => {
-    if (++attempts === 1) {
+    if (++attempts <= 3) {
       await gate;
       await route.fulfill({ status: 503, json: { message: 'Unavailable' } });
     } else {
@@ -484,8 +484,12 @@ test('book search visibly spins and keeps its status after the field loses focus
     await expect(
       page.getByText('Your first dogeard is waiting.'),
     ).toBeVisible();
-    await page.getByRole('link', { name: 'Add a quote', exact: true }).click();
-    const input = page.getByRole('combobox');
+    await page
+      .locator('.page-heading')
+      .getByRole('link', { name: 'Add a quote', exact: true })
+      .click();
+    await expect(page.getByLabel('Book catalogue')).toHaveCount(0);
+    const input = page.getByRole('combobox', { name: 'Find a book' });
     const spinner = page.locator('.search-field-icon .spinner');
     await input.fill('A slow book');
     await expect(spinner).toBeVisible();
@@ -520,6 +524,7 @@ test('book search visibly spins and keeps its status after the field loses focus
     await expect(page.locator('.search [role="alert"]')).toContainText(
       'Open Library is unavailable',
     );
+    expect(attempts).toBe(3);
     await expect(spinner).toHaveCount(0);
     await expect(input).toHaveAttribute('aria-busy', 'false');
     await page.getByRole('button', { name: 'Retry search' }).click();
@@ -559,11 +564,16 @@ test('Add quote opens without waiting for more page code or a fresh library requ
     await route.continue();
   });
   try {
-    await page.getByRole('link', { name: 'Add a quote', exact: true }).click();
+    await page
+      .locator('.page-heading')
+      .getByRole('link', { name: 'Add a quote', exact: true })
+      .click();
     await expect(
       page.getByRole('heading', { name: 'Keep a quote.' }),
     ).toBeVisible({ timeout: 1500 });
-    await expect(page.getByRole('combobox')).toBeVisible();
+    await expect(
+      page.getByRole('combobox', { name: 'Find a book' }),
+    ).toBeVisible();
     expect(extraScripts).toEqual([]);
     expect(libraryReads).toBe(0);
     await page.getByRole('link', { name: 'Library', exact: true }).click();
@@ -620,17 +630,20 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await expect(
     page.getByRole('heading', { name: 'Your library.' }),
   ).toBeVisible();
-  await page.getByRole('link', { name: 'Add a quote', exact: true }).click();
+  await page
+    .locator('.page-heading')
+    .getByRole('link', { name: 'Add a quote', exact: true })
+    .click();
   await expect(
     page.getByRole('button', { name: 'Find a new book' }),
   ).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByLabel('Filter your library')).toHaveCount(0);
-  await page.getByRole('combobox').fill('A Book');
+  await page.getByRole('combobox', { name: 'Find a book' }).fill('A Book');
   await expect(page.locator('.search .spinner')).toBeVisible();
-  await page.getByRole('combobox').press('ArrowDown');
-  await expect(page.getByRole('option')).toBeVisible();
-  await page.getByRole('combobox').press('ArrowDown');
-  await page.getByRole('combobox').press('Enter');
+  await page.getByRole('combobox', { name: 'Find a book' }).press('ArrowDown');
+  await expect(page.locator('.search li[role=option]')).toBeVisible();
+  await page.getByRole('combobox', { name: 'Find a book' }).press('ArrowDown');
+  await page.getByRole('combobox', { name: 'Find a book' }).press('Enter');
   await expect(page.getByText('A story worth remembering.')).toBeVisible();
   await page
     .getByLabel('The words you want to keep')
@@ -681,9 +694,13 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await expect(
     page.getByRole('button', { name: 'Choose from your library' }),
   ).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByRole('combobox')).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Find a book' })).toHaveCount(
+    0,
+  );
   await page.getByRole('button', { name: 'Find a new book' }).click();
-  await expect(page.getByRole('combobox')).toBeVisible();
+  await expect(
+    page.getByRole('combobox', { name: 'Find a book' }),
+  ).toBeVisible();
   await expect(page.getByLabel('Filter your library')).toHaveCount(0);
   await page.getByRole('button', { name: 'Choose from your library' }).click();
   await page.getByLabel('Filter your library').fill('A. Reader');
@@ -861,6 +878,7 @@ test('creates, reuses, renames and moves personal collections without book searc
     .getByRole('button', { name: 'Create a collection', exact: true })
     .click();
   await page.getByLabel('Collection name').fill('Passing thoughts');
+  await page.getByText('Customise collection', { exact: true }).click();
   const iconChoices = page.getByRole('group', {
     name: 'Collection icon',
     exact: true,
@@ -956,6 +974,7 @@ test('creates, reuses, renames and moves personal collections without book searc
   await page.getByRole('button', { name: 'Edit collection' }).click();
   let dialog = page.getByRole('alertdialog');
   await dialog.getByLabel('Collection name').fill('Little observations');
+  await dialog.getByText('Customise collection', { exact: true }).click();
   await dialog
     .getByRole('group', { name: 'Collection icon', exact: true })
     .getByRole('button')
@@ -995,6 +1014,7 @@ test('creates, reuses, renames and moves personal collections without book searc
   await expect(dialog.getByLabel('Author or speaker')).toHaveValue('A friend');
   await dialog.getByLabel('Destination').selectOption('new');
   await dialog.getByLabel('New collection name').fill('Conversations');
+  await dialog.getByText('Customise collection', { exact: true }).click();
   await dialog
     .getByRole('group', { name: 'Collection icon', exact: true })
     .getByRole('button')
@@ -1189,4 +1209,375 @@ test('moving between books and collections retains original attribution and quot
     .click();
   await expect(page.locator('.book-card')).toHaveCount(1);
   await expect(page.locator('.book-card')).toContainText('Another book');
+});
+
+// Retained for a future Google discovery trial; production UI currently exposes only Open Library.
+test.skip('switches catalogues and saves Google Books while retaining Open Library and library reuse', async ({
+  page,
+}) => {
+  await signup(page);
+  const sourceId = `google_browser_${Date.now()}`;
+  fixtureSources.push(sourceId);
+  let googleReads = 0,
+    openReads = 0,
+    releaseGoogle!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    releaseGoogle = resolve;
+  });
+  await page.route('https://openlibrary.org/search.json?*', (route) => {
+    openReads++;
+    return route.fulfill({
+      json: {
+        docs: [
+          {
+            key: '/works/OL123W',
+            title: 'An Open Library result',
+            author_name: ['Open Writer'],
+          },
+        ],
+      },
+    });
+  });
+  await page.route(
+    'https://www.googleapis.com/books/v1/volumes?*',
+    async (route) => {
+      googleReads++;
+      expect(new URL(route.request().url()).searchParams.get('key')).toBe(
+        'browser-test-key-not-a-real-credential',
+      );
+      expect(route.request().headers()['x-goog-api-key']).toBeUndefined();
+      if (googleReads === 1) {
+        await gate;
+        return route.fulfill({
+          status: 503,
+          json: {
+            error: {
+              code: 429,
+              status: 'RESOURCE_EXHAUSTED',
+              message: 'Quota exceeded for Queries per day',
+              details: [
+                {
+                  metadata: {
+                    quota_limit_value: '0',
+                    quota_unit: '1/d/{project}',
+                    quota_limit: 'defaultPerDayPerProject',
+                  },
+                },
+              ],
+            },
+          },
+        });
+      }
+      return route.fulfill({
+        json: {
+          items: [
+            {
+              id: sourceId,
+              volumeInfo: {
+                title: 'A Google Books trial',
+                authors: ['Google Writer'],
+                description: '<p>A Google description.</p>',
+                publishedDate: '2022-04-01',
+                industryIdentifiers: [
+                  { type: 'ISBN_13', identifier: '9781234567890' },
+                ],
+              },
+            },
+          ],
+        },
+      });
+    },
+  );
+  try {
+    await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+    const search = page.getByRole('combobox', { name: 'Find a book' });
+    await search.fill('A Google Books trial');
+    await expect(
+      page.getByRole('option', { name: /An Open Library result/ }),
+    ).toBeVisible();
+    await page.getByLabel('Book catalogue').selectOption('google_books');
+    await expect(
+      page.getByRole('option', { name: /An Open Library result/ }),
+    ).toHaveCount(0);
+    await expect(search).toHaveAttribute('aria-busy', 'true');
+    await expect(page.getByRole('status')).toContainText(
+      'Searching Google Books',
+    );
+    releaseGoogle();
+    await expect(page.getByRole('alert')).toContainText(
+      'Google Books has no daily search allowance',
+    );
+    await page.getByRole('button', { name: 'Retry search' }).click();
+    await expect(
+      page.getByRole('grid', { name: 'Google Books search results' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('grid').locator('.placeholder > span'),
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole('link', {
+        name: 'View A Google Books trial on Google Books',
+      }),
+    ).toHaveAttribute('href', `https://books.google.com/books?id=${sourceId}`);
+    await expect(page.getByAltText('Powered by Google')).toBeVisible();
+    await checkA11y(page);
+    await expect
+      .poll(() =>
+        page
+          .getByAltText('Powered by Google')
+          .evaluate((node) => (node as HTMLImageElement).naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    await page.screenshot({
+      path: `test-results/google-search-${page.viewportSize()!.width}.png`,
+      fullPage: true,
+    });
+    await search.focus();
+    await search.press('ArrowDown');
+    await search.press('Enter');
+    await expect(
+      page.getByRole('heading', { name: 'A Google Books trial' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('A Google description.', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'View on Google Books' }),
+    ).toBeVisible();
+    await page
+      .getByLabel('The words you want to keep')
+      .fill('Saved through Google Books.');
+    await page.getByRole('button', { name: 'Keep this quote' }).click();
+    await expect(page).toHaveURL(/#\/books\//);
+    await expect(page.locator('.quote-card')).toContainText(
+      'Saved through Google Books.',
+    );
+    const catalogue = await admin
+      .from('books')
+      .select('source,source_id,title,isbn_13,description')
+      .eq('source_id', sourceId)
+      .single();
+    expect(catalogue.error).toBeNull();
+    expect(catalogue.data).toMatchObject({
+      source: 'google_books',
+      source_id: sourceId,
+      title: 'A Google Books trial',
+      isbn_13: '9781234567890',
+      description: 'A Google description.',
+    });
+    await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+    await page
+      .getByRole('button', { name: /Choose A Google Books trial/ })
+      .click();
+    await page
+      .getByLabel('The words you want to keep')
+      .fill('Reused without an external search.');
+    await page.getByRole('button', { name: 'Keep this quote' }).click();
+    await expect(page.locator('.quote-card')).toHaveCount(2);
+    await page.reload();
+    await expect(page.locator('.quote-card')).toHaveCount(2);
+    await checkA11y(page);
+    expect(googleReads).toBe(2);
+    expect(openReads).toBe(1);
+  } finally {
+    releaseGoogle();
+  }
+});
+
+test.skip('retries Google backend failures while showing progress and offers an explicit Open Library fallback', async ({
+  page,
+}) => {
+  await signup(page);
+  const attempts: Record<string, number[]> = {};
+  let openReads = 0;
+  await page.route('https://www.googleapis.com/books/v1/volumes?*', (route) => {
+    const term = new URL(route.request().url()).searchParams.get('q')!;
+    (attempts[term] ||= []).push(Date.now());
+    if (term === 'retry success' && attempts[term].length === 3)
+      return route.fulfill({
+        json: {
+          items: [
+            {
+              id: 'retry_success',
+              volumeInfo: {
+                title: 'Recovered Google result',
+                authors: ['A Writer'],
+              },
+            },
+          ],
+        },
+      });
+    return route.fulfill({
+      status: 503,
+      json: { error: { code: 503, errors: [{ reason: 'backendFailed' }] } },
+    });
+  });
+  await page.route('https://openlibrary.org/search.json?*', (route) => {
+    openReads++;
+    expect(new URL(route.request().url()).searchParams.get('q')).toBe(
+      'still unavailable',
+    );
+    return route.fulfill({
+      json: {
+        docs: [{ key: '/works/OL123W', title: 'Open Library fallback result' }],
+      },
+    });
+  });
+  await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+  await page.getByLabel('Book catalogue').selectOption('google_books');
+  const search = page.getByRole('combobox', { name: 'Find a book' });
+  await search.fill('retry success');
+  await expect
+    .poll(() => attempts['retry success']?.length || 0)
+    .toBeGreaterThanOrEqual(1);
+  await expect(search).toHaveAttribute('aria-busy', 'true');
+  await expect(page.getByRole('status')).toContainText(
+    'Searching Google Books',
+  );
+  await expect(page.locator('.search .spinner')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /Recovered Google result/ }),
+  ).toBeVisible({ timeout: 10000 });
+  expect(attempts['retry success']).toHaveLength(3);
+  expect(
+    attempts['retry success'][1] - attempts['retry success'][0],
+  ).toBeGreaterThanOrEqual(500);
+  expect(
+    attempts['retry success'][2] - attempts['retry success'][1],
+  ).toBeGreaterThanOrEqual(1000);
+  await search.fill('still unavailable');
+  await expect(page.getByRole('alert')).toContainText(
+    'Google Books is unavailable',
+    { timeout: 10000 },
+  );
+  expect(attempts['still unavailable']).toHaveLength(3);
+  expect(openReads).toBe(0);
+  await checkA11y(page);
+  await page
+    .getByRole('button', { name: 'Search Open Library instead' })
+    .click();
+  await expect(page.getByLabel('Book catalogue')).toHaveValue('open_library');
+  await expect(search).toHaveValue('still unavailable');
+  await expect(
+    page.getByRole('option', { name: /Open Library fallback result/ }),
+  ).toBeVisible();
+  expect(openReads).toBe(1);
+  expect(attempts['still unavailable']).toHaveLength(3);
+});
+
+test('collection layouts fit review viewports and preserve drafts and visible dialog actions', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await signup(page);
+  await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Create a collection', exact: true })
+    .click();
+  const longName = 'W'.repeat(120);
+  await page.getByLabel('Collection name').fill(longName);
+  await page.getByRole('button', { name: 'Use this collection' }).click();
+  const writing = page.getByLabel('The words you want to keep');
+  await expect(writing).toBeFocused();
+  const writingBox = await writing.boundingBox();
+  expect(writingBox!.y).toBeGreaterThanOrEqual(0);
+  expect(writingBox!.y + writingBox!.height).toBeLessThanOrEqual(568);
+  await expect(page.locator('.collection-customise')).not.toHaveAttribute(
+    'open',
+    '',
+  );
+  await writing.fill('A line for the responsive collection review.');
+  await page.getByRole('button', { name: 'Keep this quote' }).click();
+  await expect(page).toHaveURL(/#\/collections\//);
+  const noOverflow = async () => {
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  };
+  const footerVisible = async () => {
+    const footer = await page.locator('.dialog-footer').boundingBox();
+    expect(footer!.y).toBeGreaterThanOrEqual(0);
+    expect(footer!.y + footer!.height).toBeLessThanOrEqual(
+      page.viewportSize()!.height,
+    );
+  };
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await noOverflow();
+    for (const control of await page
+      .locator('nav a, nav .nav-sign-out, .quote-meta .actions button')
+      .all()) {
+      const box = await control.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+    }
+    await page
+      .getByRole('button', { name: 'Edit collection', exact: true })
+      .click();
+    const dialog = page.getByRole('alertdialog');
+    await dialog.getByLabel('Collection name').fill('Unsaved draft');
+    await dialog.getByText('Customise collection', { exact: true }).click();
+    const icon = dialog.getByRole('button', {
+      name: 'Collection icon: Layers',
+      exact: true,
+    });
+    await icon.click();
+    await footerVisible();
+    await page.screenshot({
+      path: `test-results/ui-review-dialog-${viewport.width}-${test.info().project.name}.png`,
+    });
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeVisible();
+    await expect(icon).toBeFocused();
+    await expect(icon).toHaveAttribute('aria-expanded', 'false');
+    await expect(dialog.getByLabel('Collection name')).toHaveValue(
+      'Unsaved draft',
+    );
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await page
+      .getByRole('link', { name: 'Library', exact: true })
+      .first()
+      .click();
+    await expect(page.locator('.book-card')).toContainText(longName);
+    await noOverflow();
+    await page.screenshot({
+      path: `test-results/ui-review-library-${viewport.width}-${test.info().project.name}.png`,
+      fullPage: true,
+    });
+    await page.locator('.book-card').click();
+    await checkA11y(page);
+    await page.screenshot({
+      path: `test-results/ui-review-${viewport.width}-${test.info().project.name}.png`,
+      fullPage: true,
+    });
+  }
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
+  const move = page.getByRole('alertdialog');
+  await move.getByLabel('Destination').selectOption('new');
+  await move.getByLabel('New collection name').fill('Another collection');
+  await move.getByText('Customise collection', { exact: true }).click();
+  await move.getByRole('button', { name: 'Collection icon: Layers' }).click();
+  await footerVisible();
+  await move.getByLabel('Source (optional)', { exact: true }).focus();
+  const source = await move
+    .getByLabel('Source (optional)', { exact: true })
+    .boundingBox();
+  const scroll = await page.locator('.dialog-scroll').boundingBox();
+  expect(source!.y).toBeGreaterThanOrEqual(scroll!.y);
+  expect(source!.y + source!.height).toBeLessThanOrEqual(
+    scroll!.y + scroll!.height + 1,
+  );
+  await footerVisible();
+  await checkA11y(page);
+  await move.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(move).not.toBeVisible();
 });

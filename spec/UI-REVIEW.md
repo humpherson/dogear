@@ -2,6 +2,18 @@
 
 Reviewed the current local app at 320×568, 390×844, 768×1024 and 1440×900 in Chromium. Used temporary local accounts, books and collections; all fixtures were removed. No repository files were changed. The existing production desktop/mobile browser suite passed all 22 tests, including its accessibility checks. Visual/manual measurements add findings not covered by that suite.
 
+## Implementation follow-up — 25 October 2026
+
+Findings 1–5 have implementation changes and browser regression coverage in `tests/app.spec.ts`:
+
+- Shrinkable library/editor grids, wrapping detail titles and three-line card titles handle valid 120-character unbroken names.
+- The dialog Escape guard lets an open icon chooser close first, preserving the draft and restoring trigger focus.
+- Optional appearance is collapsed under “Customise collection”; the mobile selected-collection summary is compact and selecting a collection focuses and scrolls to the quote input.
+- Navigation and quote actions have at least 44×44 px targets, with a deliberate mobile action row and separated Delete action.
+- Edit/move dialogs have scrolling form bodies and persistent action footers; edit previews are compact.
+
+The original findings below remain as the review record. Section 6 is explicitly excluded from this work: colour controls remain hidden, saved colours and palette behaviour are unchanged. Real on-screen keyboard, iOS/Android and assistive-technology verification remains outstanding as described under Coverage limits.
+
 ## 1. High: valid long names cause horizontal overflow
 
 A 110-character collection name without spaces is accepted. At a 320 px viewport its detail page becomes 1,544 px wide. At 768 px the library grid becomes 1,679 px wide; at 1440 px it becomes 1,799 px wide and pushes other cards off screen. Mobile library cards wrap the name, but the full collection heading does not; desktop grid tracks also retain their minimum content width.

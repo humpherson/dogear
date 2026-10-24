@@ -2,6 +2,38 @@
 
 Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
 
+## Bounded Google Books retries and fallback
+
+Google Books searches now make up to three total attempts for transient HTTP 408/500/502/503/504 responses and connection failures. Equal jitter yields 0.5–1 second and 1–2 second delays; Retry-After is respected within the overall 20-second deadline. Abort signals stop both fetches and pending delay timers. Inner quota/key errors are non-retryable even when wrapped in 503. Query-library retries stay disabled to prevent multiplication. Loading remains visible through backoff. After exhaustion, Search Open Library instead preserves the query and switches providers explicitly.
+
+Validation: all 93 unit tests passed, including recovery on attempt three, exponential/jitter delays, maximum attempts, cancellation during backoff, Retry-After, total deadline, network recovery and permanent errors. Four focused desktop/mobile production browser checks passed for the existing provider flow plus recovery/progress, three-attempt exhaustion and explicit Open Library fallback. Lint, types, formatting and the production browser build passed. No database changes were required.
+
+A single live check through the local app made exactly three requests for mark in approximately 3.7 seconds and still received Google backend failures. Retry limits worked; this check does not establish live Google search recovery or improved uptime. The Open Library fallback remains available. No keys were printed and no Cloud settings were changed.
+
+## Books API key attribution correction
+
+The initial implementation used the generic X-Goog-Api-Key header. Corrected it to the `key` query parameter documented specifically for Books API. Unit and browser fixtures now assert that parameter rather than the header. Open Library, caching, cancellation, provider switching and saved book behaviour remain unchanged. Real keys are never printed by diagnostic scripts or committed.
+
+A user's Cloud console showed 1,000 daily queries with only two used, contradicting the earlier interpretation of the zero-quota response. Controlled local checks confirmed an anonymous request could return consumer project 624717413613 with zero quota. A minimal ISBN request using the configured key parameter returned HTTP 200. Keyword searches returned Google's distinct 503/backendFailed response, both with and without the field filter and from the local browser origin. This leaves live keyword-search availability unresolved; it does not justify requesting more quota based on the supplied console values. No Cloud settings were changed.
+
+Validation: 86 unit tests and focused desktop/mobile production provider checks passed with fake credentials. Lint, types, formatting and the browser production build passed. These fixture tests verify the corrected request format and app behaviour; they do not prove Google's current live keyword-search availability. The previous quota documentation has been clarified accordingly.
+
+## Google Books quota error reporting
+
+Google Books may return HTTP 503 with a JSON error containing code 429, RESOURCE_EXHAUSTED and a zero daily quota. The client now reads the error envelope and quota metadata, differentiating a zero daily allowance, an exhausted nonzero daily allowance and transient throttling. Messages do not reflect provider project identifiers or raw error content. Open Library remains available and no automatic retries were introduced. Non-JSON service failures retain a safe generic error.
+
+Validation: all 86 unit tests passed, including the reported 503/429 payload and non-JSON failures. Focused desktop/mobile production browser flows passed for the zero-allowance message, provider switching, retry and quote persistence. Unit tests now default to no Google key, with provider-specific tests opting into a fake key, so adding a real `.env.local` key cannot alter test UI or send real-key unit requests. No hosted quota/configuration changes were made and no live request with the real key was needed. Lint, types, formatting and the production browser build were checked.
+
+## Optional Google Books discovery
+
+Open Library remains the default, with a Book catalogue selector when `VITE_GOOGLE_BOOKS_API_KEY` is configured. Google Books searches use their own cancellable request path and provider-scoped cache, including search descriptions so selection needs no second metadata call. Open Library retains its queue and selected-description request. Switching catalogues hides old results and cancels in-flight requests; there is no mixing or implicit fallback. Google results expose keyboard-selectable choices alongside prominent source links and the official attribution image. Saved selections use canonical Supabase metadata without calling either discovery service.
+
+Applied additive migration `202610240010_google_books_discovery.sql` locally. It removes only the old prohibition on new Google catalogue entries, retaining authentication, field validation, immutable catalogue metadata, per-user/book locks and quote ownership. Regenerated database types; function signatures are unchanged. Existing Google and Open Library records stay separate and usable. Hosted migration/deployment was not performed.
+
+Configuration is documented in README and `.env.example`; the Pages workflow passes the optional public browser key from repository Variables. Restrict the real key to Books API and approved website origins. Automated browser builds always use a fake fixture key. An initial CORS preflight check was insufficient to verify key attribution. A subsequent controlled live check confirmed that an anonymous call returned a shared zero-quota consumer while the configured key in the Books API documented query parameter returned HTTP 200. Live latency has not been benchmarked.
+
+Validation: 84 unit/component/service tests and 176 real database checks passed. New cases cover Google normalisation, safe metadata, the documented key query parameter, cancellation/provider switching, missing-key/429/403 handling, new Google saves, canonical metadata, association reuse and cross-user deletion denial. All 24 project-path desktop/mobile browser checks passed. The Google browser flow covers provider switching, loading, quota retry, keyboard selection, attribution/source links, persistence and saved-library reuse without further external requests. All 24 root-path checks also passed. A final focused desktop/mobile run passed after correcting the missing-cover placeholder layout; the Google attribution asset loaded successfully and result screenshots were inspected. Lint, typecheck and formatting passed, with the existing bundle-size advisory on production builds.
+
 ## Collection icon selection
 
 Added a Collection icon dropdown with Layers (the existing default) plus Music, TV, Book, Speech, Paw print, User, Grinning face, Slightly frowning face, Star and Brush. It uses labelled icon previews, native radio selection and touch targets consistent with the colour controls. Selection closes the menu and restores focus. Existing icon colour settings apply to the selected icon. Creation, Edit collection and move-to-new-collection support the choice; library cards, the saved-entry picker and collection details render the saved icon.

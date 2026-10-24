@@ -198,6 +198,7 @@ describe('book autocomplete', () => {
     const requests: string[] = [];
     server.use(
       http.get('https://openlibrary.org/search.json', ({ request }) => {
+        expect(new URL(request.url).searchParams.get('sort')).toBe('new');
         requests.push(new URL(request.url).searchParams.get('q')!);
         return HttpResponse.json({
           docs: [{ key: '/works/OL1W', title: 'Reading slowly' }],
@@ -262,6 +263,7 @@ describe('book autocomplete', () => {
     expect(screen.queryByText('Old result')).not.toBeInTheDocument();
   });
   it('offers retry after an API error', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     server.use(
       http.get(
         'https://openlibrary.org/search.json',
@@ -271,12 +273,12 @@ describe('book autocomplete', () => {
     providers(<BookSearch onSelect={vi.fn()} />);
     await userEvent.type(screen.getByRole('combobox'), 'books');
     expect(
-      await screen.findByRole('alert', {}, { timeout: 4000 }),
+      await screen.findByRole('alert', {}, { timeout: 8000 }),
     ).toHaveTextContent('Open Library is busy');
     expect(
       screen.getByRole('button', { name: 'Retry search' }),
     ).toBeInTheDocument();
-  });
+  }, 10000);
 });
 describe('library and quote interactions', () => {
   it('renders a real empty state', async () => {

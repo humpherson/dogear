@@ -1,3 +1,4 @@
+import { protectCollectionChooserEscape } from '../components/collections/collectionDialog';
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-alert-dialog';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -109,34 +110,45 @@ export function CollectionPage() {
         </Dialog.Trigger>
         <Dialog.Portal>
           <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog">
+          <Dialog.Content
+            className="dialog managed-dialog"
+            onEscapeKeyDown={protectCollectionChooserEscape}
+          >
             <Dialog.Title>Edit collection</Dialog.Title>
             <Dialog.Description>
               Your collection name stays private. Renaming it won’t change quote
               credits.
             </Dialog.Description>
             <form
+              className="dialog-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 rename.mutate();
               }}
             >
-              <label htmlFor="rename-collection">Collection name</label>
-              <input
-                id="rename-collection"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={120}
-                disabled={rename.isPending}
-              />
-              <CollectionAppearanceFields
-                value={appearance}
-                onChange={setAppearance}
-                disabled={rename.isPending}
-              />
-              <CollectionCover name={name} {...appearance} large />
-              {rename.isError && <p role="alert">{message(rename.error)}</p>}
-              <div className="actions">
+              <div className="dialog-scroll">
+                <label htmlFor="rename-collection">Collection name</label>
+                <input
+                  id="rename-collection"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={120}
+                  disabled={rename.isPending}
+                />
+                <details className="collection-customise">
+                  <summary>Customise collection</summary>
+                  <CollectionAppearanceFields
+                    value={appearance}
+                    onChange={setAppearance}
+                    disabled={rename.isPending}
+                  />
+                  <div className="collection-preview">
+                    <CollectionCover name={name} {...appearance} large />
+                  </div>
+                </details>
+                {rename.isError && <p role="alert">{message(rename.error)}</p>}
+              </div>
+              <div className="actions dialog-footer">
                 <button type="submit" disabled={rename.isPending}>
                   {rename.isPending && <Spinner />}
                   {rename.isPending ? 'Saving…' : 'Save collection'}

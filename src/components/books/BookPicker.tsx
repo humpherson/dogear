@@ -200,10 +200,13 @@ export function BookPicker({
                     {nameError}
                   </p>
                 )}
-                <CollectionAppearanceFields
-                  value={appearance}
-                  onChange={setAppearance}
-                />
+                <details className="collection-customise">
+                  <summary>Customise collection</summary>
+                  <CollectionAppearanceFields
+                    value={appearance}
+                    onChange={setAppearance}
+                  />
+                </details>
                 <button type="submit">Use this collection</button>
               </form>
             ),

@@ -52,6 +52,30 @@ export function BookDetails({
           </p>
         )}
         {book.description && <p className="description">{book.description}</p>}
+        {book.source === 'google_books' && (
+          <p>
+            <a
+              href={`https://books.google.com/books?id=${encodeURIComponent(book.source_id)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View on Google Books
+            </a>
+            <a
+              className="google-attribution"
+              href="https://books.google.com/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                src={`${import.meta.env.BASE_URL}powered-by-google.png`}
+                alt="Powered by Google"
+                width="62"
+                height="30"
+              />
+            </a>
+          </p>
+        )}
         {book.source === 'open_library' && /^OL\d+W$/.test(book.source_id) && (
           <p>
             <a

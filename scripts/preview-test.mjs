@@ -6,6 +6,7 @@ const local = JSON.parse(
 );
 const env = {
   ...process.env,
+  VITE_GOOGLE_BOOKS_API_KEY: 'browser-test-key-not-a-real-credential',
   VITE_SUPABASE_URL: local.API_URL,
   VITE_SUPABASE_PUBLISHABLE_KEY: local.ANON_KEY,
   VITE_BASE_PATH: process.env.TEST_BASE_PATH || '/dogear/',

@@ -1,3 +1,4 @@
+import { protectCollectionChooserEscape } from '../collections/collectionDialog';
 import { CollectionAppearanceFields } from '../collections/CollectionAppearanceFields';
 import { type CollectionAppearance } from '../../types';
 import { useRef, useState } from 'react';
@@ -121,13 +122,17 @@ export function MoveQuoteDialog({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog">
+        <Dialog.Content
+          className="dialog managed-dialog"
+          onEscapeKeyDown={protectCollectionChooserEscape}
+        >
           <Dialog.Title>Move this quote</Dialog.Title>
           <Dialog.Description>
             Choose a new home and review its credits. Moving the final quote
             also removes its previous book or collection from your library.
           </Dialog.Description>
           <form
+            className="dialog-form"
             onSubmit={(event) => {
               event.preventDefault();
               setError('');
@@ -138,85 +143,92 @@ export function MoveQuoteDialog({
               mutation.mutate();
             }}
           >
-            {library.isPending && (
-              <LoadingIndicator>Loading your library…</LoadingIndicator>
-            )}
-            {library.isError && (
-              <p role="alert">
-                {message(library.error)}{' '}
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => void library.refetch()}
-                >
-                  Retry library
-                </button>
+            <div className="dialog-scroll">
+              {library.isPending && (
+                <LoadingIndicator>Loading your library…</LoadingIndicator>
+              )}
+              {library.isError && (
+                <p role="alert">
+                  {message(library.error)}{' '}
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => void library.refetch()}
+                  >
+                    Retry library
+                  </button>
+                </p>
+              )}
+              <label htmlFor={`move-target-${quote.id}`}>Destination</label>
+              <select
+                id={`move-target-${quote.id}`}
+                value={target}
+                onChange={(event) => setTarget(event.target.value)}
+                disabled={mutation.isPending}
+              >
+                <option value="">Choose a book or collection</option>
+                {targets.map((entry) => (
+                  <option
+                    key={`${isCollection(entry) ? 'collection' : 'book'}:${entry.id}`}
+                    value={`${isCollection(entry) ? 'collection' : 'book'}:${entry.id}`}
+                  >
+                    {entryTitle(entry)}
+                    {isCollection(entry) ? ' — Collection' : ' — Book'}
+                  </option>
+                ))}
+                <option value="new">Create a collection</option>
+              </select>
+              {target === 'new' && (
+                <>
+                  <label htmlFor={`move-name-${quote.id}`}>
+                    New collection name
+                  </label>
+                  <input
+                    id={`move-name-${quote.id}`}
+                    value={name}
+                    maxLength={120}
+                    onChange={(event) => setName(event.target.value)}
+                    disabled={mutation.isPending}
+                  />
+                  <details className="collection-customise">
+                    <summary>Customise collection</summary>
+                    <CollectionAppearanceFields
+                      value={appearance}
+                      onChange={setAppearance}
+                      disabled={mutation.isPending}
+                    />
+                  </details>
+                </>
+              )}
+              <label htmlFor={`move-author-${quote.id}`}>
+                Author or speaker (optional)
+              </label>
+              <input
+                id={`move-author-${quote.id}`}
+                value={author}
+                maxLength={10000}
+                onChange={(event) => setAuthor(event.target.value)}
+                disabled={mutation.isPending}
+              />
+              <label htmlFor={`move-source-${quote.id}`}>
+                Source (optional)
+              </label>
+              <input
+                id={`move-source-${quote.id}`}
+                value={source}
+                maxLength={1000}
+                onChange={(event) => setSource(event.target.value)}
+                disabled={mutation.isPending}
+              />
+              <p className="hint">
+                Quote text and these credits can appear publicly. Collection
+                names, notes and references stay private.
               </p>
-            )}
-            <label htmlFor={`move-target-${quote.id}`}>Destination</label>
-            <select
-              id={`move-target-${quote.id}`}
-              value={target}
-              onChange={(event) => setTarget(event.target.value)}
-              disabled={mutation.isPending}
-            >
-              <option value="">Choose a book or collection</option>
-              {targets.map((entry) => (
-                <option
-                  key={`${isCollection(entry) ? 'collection' : 'book'}:${entry.id}`}
-                  value={`${isCollection(entry) ? 'collection' : 'book'}:${entry.id}`}
-                >
-                  {entryTitle(entry)}
-                  {isCollection(entry) ? ' — Collection' : ' — Book'}
-                </option>
-              ))}
-              <option value="new">Create a collection</option>
-            </select>
-            {target === 'new' && (
-              <>
-                <label htmlFor={`move-name-${quote.id}`}>
-                  New collection name
-                </label>
-                <input
-                  id={`move-name-${quote.id}`}
-                  value={name}
-                  maxLength={120}
-                  onChange={(event) => setName(event.target.value)}
-                  disabled={mutation.isPending}
-                />
-                <CollectionAppearanceFields
-                  value={appearance}
-                  onChange={setAppearance}
-                  disabled={mutation.isPending}
-                />
-              </>
-            )}
-            <label htmlFor={`move-author-${quote.id}`}>
-              Author or speaker (optional)
-            </label>
-            <input
-              id={`move-author-${quote.id}`}
-              value={author}
-              maxLength={10000}
-              onChange={(event) => setAuthor(event.target.value)}
-              disabled={mutation.isPending}
-            />
-            <label htmlFor={`move-source-${quote.id}`}>Source (optional)</label>
-            <input
-              id={`move-source-${quote.id}`}
-              value={source}
-              maxLength={1000}
-              onChange={(event) => setSource(event.target.value)}
-              disabled={mutation.isPending}
-            />
-            <p className="hint">
-              Quote text and these credits can appear publicly. Collection
-              names, notes and references stay private.
-            </p>
-            {(error || mutation.isError) && (
-              <p role="alert">{error || message(mutation.error)}</p>
-            )}
-            <div className="actions">
+              {(error || mutation.isError) && (
+                <p role="alert">{error || message(mutation.error)}</p>
+              )}
+            </div>
+            <div className="actions dialog-footer">
               <button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending && <Spinner />}
                 {mutation.isPending ? 'Moving…' : 'Move quote'}

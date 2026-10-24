@@ -652,7 +652,8 @@ button.library-book-choice:focus-visible {
 .search-field input {
   padding-left: 43px;
 }
-.search ul {
+.search ul,
+.search .book-search-results {
   list-style: none;
   padding: 0;
   margin: 10px 0;
@@ -662,10 +663,12 @@ button.library-book-choice:focus-visible {
   border: 1px solid #c6c7b7;
   border-radius: 5px;
 }
-.search ul[hidden] {
+.search ul[hidden],
+.search .book-search-results[hidden] {
   display: none;
 }
-.search li {
+.search li,
+.search .google-book-result {
   display: flex;
   gap: 15px;
   padding: 12px;
@@ -673,14 +676,17 @@ button.library-book-choice:focus-visible {
   border-bottom: 1px solid #eee9dc;
 }
 .search li:hover,
-.search li.selected {
+.search li.selected,
+.search .google-book-result:hover,
+.search .google-book-result.selected {
   background: #e8ebdf;
 }
-.search li strong {
+.search li strong,
+.search .book-result-choice strong {
   display: block;
   font-size: 0.9rem;
 }
-.search li span {
+.search .book-result-text span {
   display: block;
   font-size: 0.75rem;
   color: #68685d;
@@ -1200,4 +1206,191 @@ select:focus-visible {
 .collection-icon-option:has(input:disabled) {
   opacity: 0.55;
   cursor: default;
+}
+
+.search .google-book-result {
+  display: grid;
+  gap: 4px;
+  cursor: default;
+}
+button.book-result-choice {
+  display: flex;
+  width: 100%;
+  gap: 15px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  text-align: left;
+  justify-content: flex-start;
+  font-weight: 400;
+}
+.book-result-choice > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.google-result-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.google-attribution {
+  display: inline-block;
+  margin-top: 12px;
+}
+.google-attribution img {
+  display: block;
+}
+
+/* Keep valid long titles inside cards, flex rows and grid tracks. */
+.library-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.book-card,
+.book-details > div,
+.page-heading > div,
+.editor-layout > section {
+  min-width: 0;
+}
+.book-details h2,
+.book-card > p,
+.page-heading h1 {
+  overflow-wrap: anywhere;
+}
+.book-card h2 {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.editor-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+nav a,
+nav .nav-sign-out,
+.quote-meta .actions button {
+  min-height: 44px;
+  min-width: 44px;
+}
+.quote-meta .quote-delete {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid #dedbce;
+}
+.collection-customise {
+  margin: 16px 0;
+}
+.collection-customise > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--color-forest);
+}
+.collection-preview {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+.collection-preview .collection-cover.large {
+  width: 90px;
+  height: 125px;
+}
+.dialog.managed-dialog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100dvh - 24px);
+  padding: 20px;
+}
+.managed-dialog > h2,
+.managed-dialog > p {
+  flex-shrink: 0;
+}
+.managed-dialog > p {
+  font-size: 0.85rem;
+  margin: 8px 0 16px;
+}
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.dialog-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 5px;
+  scroll-padding: 16px;
+}
+.dialog .dialog-footer {
+  flex-shrink: 0;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid #dedbce;
+  background: #fffdf7;
+}
+@media (max-width: 760px) {
+  .site-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px;
+  }
+  .site-header nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  nav a,
+  nav .nav-sign-out {
+    font-size: 0.85rem;
+  }
+  .library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .selected-collection-summary .book-details {
+    align-items: center;
+    gap: 14px;
+    padding: 0 0 12px;
+  }
+  .selected-collection-summary .collection-cover.large {
+    width: 44px;
+    height: 60px;
+  }
+  .selected-collection-summary .collection-cover.large svg {
+    width: 24px;
+    height: 24px;
+  }
+  .selected-collection-summary .collection-cover.large > span,
+  .selected-collection-summary .book-details .muted {
+    display: none;
+  }
+  .selected-collection-summary h2 {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+  .selected-collection-summary .eyebrow {
+    margin-bottom: 4px;
+  }
+  .quote-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .quote-meta > .actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+  .quote-meta .quote-delete {
+    margin-left: 0;
+    padding-left: 8px;
+  }
+  .managed-dialog h2 {
+    font-size: 1.4rem;
+  }
 }

@@ -37,8 +37,21 @@ export function CollectionAppearanceFields({
     const closeOutside = (event: MouseEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(null);
     };
+    // Radix listens for Escape on document. Consume it in capture before the
+    // enclosing dialog dismisses, including when focus stays on the trigger.
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(null);
+      triggers.current[open]?.focus();
+    };
     document.addEventListener('click', closeOutside);
-    return () => document.removeEventListener('click', closeOutside);
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      document.removeEventListener('click', closeOutside);
+      document.removeEventListener('keydown', closeOnEscape, true);
+    };
   }, [open]);
   const selectedIcon = findCollectionIcon(value.icon);
   const iconExpanded = open === 'icon' && !disabled;
