@@ -54,6 +54,8 @@ export function QuoteForm({
   }, [focusOnMount, setFocus]);
   return (
     <form
+      autoComplete="off"
+      name="quote-editor"
       ref={form}
       onSubmit={handleSubmit(onSubmit)}
       className="quote-form"
@@ -61,6 +63,7 @@ export function QuoteForm({
     >
       <label htmlFor={`${id}-quote-text`}>The words you want to keep</label>
       <textarea
+        autoComplete="off"
         id={`${id}-quote-text`}
         rows={7}
         placeholder="A sentence, a passage, a little perspective…"
@@ -81,6 +84,7 @@ export function QuoteForm({
             Author or speaker <span className="muted">(optional)</span>
           </label>
           <input
+            autoComplete="off"
             id={`${id}-author`}
             {...register('credit_author')}
             maxLength={10000}
@@ -94,6 +98,7 @@ export function QuoteForm({
             Source <span className="muted">(optional)</span>
           </label>
           <input
+            autoComplete="off"
             id={`${id}-source`}
             {...register('credit_source')}
             maxLength={1000}
@@ -111,6 +116,7 @@ export function QuoteForm({
         <span className="muted">(optional)</span>
       </label>
       <input
+        autoComplete="off"
         id={`${id}-page-number`}
         placeholder="e.g. 42, xiv, or Chapter 3"
         {...register('page_number')}
@@ -124,6 +130,7 @@ export function QuoteForm({
         A note to yourself <span className="muted">(optional)</span>
       </label>
       <textarea
+        autoComplete="off"
         id={`${id}-quote-note`}
         rows={3}
         {...register('note')}

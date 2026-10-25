@@ -242,3 +242,12 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 - Other design recommendations remain unimplemented. The source changes require frontend deployment.
 - Verified matching action labels and visible leading plus icons on library, book and collection pages at 320, 390 and 1440 px using disposable local fixtures. All nine page/viewport checks passed; fixtures were removed. Formatting and diff whitespace checks passed.
 - Root and project-path production builds passed. Temporary review preview servers were stopped.
+
+## 25 October 2026 — browser autofill hints
+
+- Audited authentication, quote creation/editing, credits, references, notes, book discovery, library/quote filters, collection creation/renaming and move forms, plus the retained hidden profile screen. Previously most content controls had no explicit autofill policy.
+- Added `autocomplete="off"` to non-account content forms and their editable fields, with descriptive names for previously unnamed controls. The shared quote form covers both new and edited book/collection quotes. React Hook Form field registration, validation, arbitrary text references and saved defaults remain unchanged.
+- Sign-in explicitly identifies the email credential as `username` and retains `current-password`. Signup/reset keep email hints; new password fields retain `new-password`. Profile display name uses `nickname`. No hidden credential fields, invalid tokens, focus tricks or user-value clearing were introduced.
+- Lint, typecheck, formatting and all 120 unit tests passed. No database/schema changes were made.
+- All 30 desktop/mobile browser tests passed, including signup, login, password recovery, quote editing, saved-book reuse and collection moves; four hidden Google discovery tests remain skipped. Root and project-path production builds passed. Frontend deployment is required for the new hints to reach Chrome.
+- The affected user's saved Chrome profile was not available for reproduction. Automated checks use clean Chromium contexts and cannot establish how Chrome's existing saved-field predictions or third-party password managers will respond. Native hints are a mitigation, not a guarantee that user-agent autofill is disabled. See [MDN's autofill guidance](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Turning_off_form_autocompletion) and [Chromium's classification overview](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/autofill/README.md).

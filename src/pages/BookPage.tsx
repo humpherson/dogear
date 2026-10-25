@@ -79,7 +79,9 @@ export function BookPage() {
       </div>
       <label htmlFor="quote-filter">Filter your quotes</label>
       <input
+        autoComplete="off"
         id="quote-filter"
+        name="book-quote-filter"
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
         placeholder="Find a word or phrase…"

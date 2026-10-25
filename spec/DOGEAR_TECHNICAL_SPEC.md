@@ -252,6 +252,8 @@ Use feature-local code where practical. Keep Supabase queries and external API t
 
 **Action consistency:** All quote-adding links/buttons use “Add quote” with a leading decorative plus icon, including mobile navigation, empty/populated library states and book/collection details. Keep the icon visible at every breakpoint and preserve existing entry-selection context.
 
+**Browser autofill:** Non-account content forms and free-text fields explicitly opt out with `autocomplete="off"`, including quote text/references/credits/notes, collection names, filters and book discovery. Use descriptive names for unregistered controls and retain React Hook Form registration for quote payloads. Authentication fields retain meaningful `username`, `email`, `current-password` and `new-password` tokens for their respective modes; the retained display-name control uses `nickname`. Do not use hidden credential traps, invalid autocomplete tokens, readonly-on-focus tricks or automatic deletion of user-entered values. Browsers and extensions can override hints, so saved-profile Chrome verification remains separate from clean-browser regression checks.
+
 ## 11. Environment configuration
 
 Commit `.env.example`, not `.env.local`:

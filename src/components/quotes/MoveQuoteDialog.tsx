@@ -132,6 +132,7 @@ export function MoveQuoteDialog({
             also removes its previous book or collection from your library.
           </Dialog.Description>
           <form
+            autoComplete="off"
             className="dialog-form"
             onSubmit={(event) => {
               event.preventDefault();
@@ -161,7 +162,9 @@ export function MoveQuoteDialog({
               )}
               <label htmlFor={`move-target-${quote.id}`}>Destination</label>
               <select
+                autoComplete="off"
                 id={`move-target-${quote.id}`}
+                name="quote-destination"
                 value={target}
                 onChange={(event) => setTarget(event.target.value)}
                 disabled={mutation.isPending}
@@ -184,7 +187,9 @@ export function MoveQuoteDialog({
                     New collection name
                   </label>
                   <input
+                    autoComplete="off"
                     id={`move-name-${quote.id}`}
+                    name="move-collection-title"
                     value={name}
                     maxLength={120}
                     onChange={(event) => setName(event.target.value)}
@@ -204,7 +209,9 @@ export function MoveQuoteDialog({
                 Author or speaker (optional)
               </label>
               <input
+                autoComplete="off"
                 id={`move-author-${quote.id}`}
+                name="quote-credit-author"
                 value={author}
                 maxLength={10000}
                 onChange={(event) => setAuthor(event.target.value)}
@@ -214,7 +221,9 @@ export function MoveQuoteDialog({
                 Source (optional)
               </label>
               <input
+                autoComplete="off"
                 id={`move-source-${quote.id}`}
+                name="quote-credit-source"
                 value={source}
                 maxLength={1000}
                 onChange={(event) => setSource(event.target.value)}

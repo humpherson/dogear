@@ -133,7 +133,9 @@ export function AddQuotePage() {
                   <summary>Customise collection</summary>
                   <label htmlFor="new-collection-name">Collection name</label>
                   <input
+                    autoComplete="off"
                     id="new-collection-name"
+                    name="new-collection-title"
                     maxLength={120}
                     value={collection.name}
                     onChange={(event) =>

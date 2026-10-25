@@ -47,6 +47,7 @@ Install the browser once with `npx playwright install chromium` (`--with-deps` o
 ## Product behavior and architecture
 
 - Loading feedback starts in the initial HTML, before JavaScript or authentication completes. Shared spinners label database reads, Open Library searches/descriptions, saves, deletes, and authentication actions. A small activity badge also covers background query refetches and mutations. Page navigation retains the app header/footer while its code loads; existing content stays visible during background reads. The book-search icon becomes a rotating spinner while a search is pending, with status text that remains visible after focus leaves the field. Indicators respect reduced motion and never imply completion before a request succeeds.
+- Quote, collection, move and filter fields explicitly disable browser autocomplete; non-authentication forms also opt out. Descriptive field names distinguish searches and quote metadata from account details. Sign-in keeps `username`/`current-password` hints, signup/recovery use email/new-password hints as appropriate, and the retained profile display-name field uses `nickname`. These are browser hints, not a guarantee against a browser or password-manager extension overriding them; verify saved-profile behaviour in the affected Chrome profile after deploying.
 
 - The sign-in, registration, and password-recovery screens are included in initial application code, so the header Sign in link opens without a separate page-code download.
 

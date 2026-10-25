@@ -89,7 +89,9 @@ export function BookPicker({
                   <>
                     <label htmlFor={`${id}-filter`}>Filter your library</label>
                     <input
+                      autoComplete="off"
                       id={`${id}-filter`}
+                      name="library-entry-filter"
                       type="search"
                       value={filter}
                       onChange={(event) => setFilter(event.target.value)}
@@ -167,6 +169,7 @@ export function BookPicker({
             title: 'Create a collection',
             content: (
               <form
+                autoComplete="off"
                 onSubmit={(event) => {
                   event.preventDefault();
                   const parsed = collectionNameSchema.safeParse(name);
@@ -184,7 +187,9 @@ export function BookPicker({
                 </p>
                 <label htmlFor={`${id}-collection`}>Collection name</label>
                 <input
+                  autoComplete="off"
                   id={`${id}-collection`}
+                  name="collection-title"
                   value={name}
                   maxLength={120}
                   onChange={(event) => {

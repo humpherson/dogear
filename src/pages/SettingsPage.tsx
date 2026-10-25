@@ -38,6 +38,7 @@ export function SettingsPage() {
         <p role="alert">{message(profile.error)}</p>
       ) : (
         <form
+          autoComplete="off"
           onSubmit={(e) => {
             e.preventDefault();
             mutation.mutate();
@@ -45,6 +46,8 @@ export function SettingsPage() {
         >
           <label htmlFor="display-name">Display name</label>
           <input
+            autoComplete="nickname"
+            name="profile-display-name"
             id="display-name"
             value={name ?? profile.data?.display_name ?? ''}
             maxLength={100}

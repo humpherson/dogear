@@ -114,14 +114,18 @@ export function AuthPage({ mode }: { mode: Mode }) {
           }[mode]
         }
       </p>
-      <form onSubmit={handleSubmit(submit)} aria-busy={isSubmitting}>
+      <form
+        name={`auth-${mode}`}
+        onSubmit={handleSubmit(submit)}
+        aria-busy={isSubmitting}
+      >
         {!isUpdate && (
           <>
             <label htmlFor="email">Email address</label>
             <input
               id="email"
               type="email"
-              autoComplete="email"
+              autoComplete={mode === 'login' ? 'username' : 'email'}
               {...register('email')}
               aria-invalid={!!errors.email}
               aria-describedby="email-error"

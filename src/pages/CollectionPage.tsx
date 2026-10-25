@@ -121,6 +121,7 @@ export function CollectionPage() {
               credits.
             </Dialog.Description>
             <form
+              autoComplete="off"
               className="dialog-form"
               onSubmit={(event) => {
                 event.preventDefault();
@@ -130,7 +131,9 @@ export function CollectionPage() {
               <div className="dialog-scroll">
                 <label htmlFor="rename-collection">Collection name</label>
                 <input
+                  autoComplete="off"
                   id="rename-collection"
+                  name="rename-collection-title"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   maxLength={120}
@@ -186,7 +189,9 @@ export function CollectionPage() {
       </div>
       <label htmlFor="collection-filter">Filter your quotes</label>
       <input
+        autoComplete="off"
         id="collection-filter"
+        name="collection-quote-filter"
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
         placeholder="Find a word or phrase…"

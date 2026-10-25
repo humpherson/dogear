@@ -67,6 +67,7 @@ export function BookSearch({
         <>
           <label htmlFor={`${id}-catalogue`}>Book catalogue</label>
           <select
+            autoComplete="off"
             id={`${id}-catalogue`}
             value={provider}
             onChange={(event) => {
@@ -84,7 +85,9 @@ export function BookSearch({
           {searching ? <Spinner /> : <Search size={20} />}
         </span>
         <input
+          autoComplete="off"
           id={id}
+          name="book-catalogue-search"
           role="combobox"
           aria-autocomplete="list"
           aria-haspopup={google ? 'grid' : 'listbox'}
@@ -97,7 +100,6 @@ export function BookSearch({
               ? `${id}-${active}`
               : undefined
           }
-          autoComplete="off"
           placeholder="Search by title or author…"
           value={input}
           onFocus={() => setOpen(true)}
