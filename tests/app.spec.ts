@@ -485,7 +485,9 @@ test('Add quote opens without waiting for more page code or a fresh library requ
     await expect(
       page.getByRole('combobox', { name: 'Find a book' }),
     ).toBeVisible();
-    expect(extraScripts).toEqual([]);
+    expect(
+      extraScripts.some((url) => /AddQuotePage-[\w-]+\.js/.test(url)),
+    ).toBe(false);
     expect(libraryReads).toBe(0);
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await expect(
@@ -495,7 +497,9 @@ test('Add quote opens without waiting for more page code or a fresh library requ
     await expect(
       page.getByRole('heading', { name: 'Keep a quote.' }),
     ).toBeVisible({ timeout: 1500 });
-    expect(extraScripts).toEqual([]);
+    expect(
+      extraScripts.some((url) => /AddQuotePage-[\w-]+\.js/.test(url)),
+    ).toBe(false);
     expect(libraryReads).toBe(0);
   } finally {
     release();
@@ -1562,4 +1566,135 @@ test('direct account changes discard private editor state and retained collectio
     page.getByText('A stored private quotation.', { exact: true }),
   ).toHaveCount(0);
   await checkA11y(page);
+});
+
+test('cold detail-page code shows navigation feedback and idle preloads do not read private records', async ({
+  page,
+}) => {
+  const email = await signup(page);
+  const owner = createClient(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  expect(
+    (
+      await owner.auth.signInWithPassword({
+        email,
+        password: 'Reading-words-123',
+      })
+    ).error,
+  ).toBeNull();
+  const source = `OL${Date.now()}W`;
+  fixtureSources.push(source);
+  const book = await owner.rpc('save_quote_with_book_result', {
+    book: {
+      source: 'open_library',
+      source_id: source,
+      title: 'Cold book page',
+      authors: ['A Writer'],
+    },
+    quote: { text: 'A cold book quotation.' },
+  });
+  expect(book.error).toBeNull();
+  const collection = await owner.rpc('save_collection_quote', {
+    collection_name: 'Cold collection page',
+    quote: { text: 'A cold collection quotation.' },
+  });
+  expect(collection.error).toBeNull();
+  let releaseBook!: () => void, releaseCollection!: () => void;
+  const bookGate = new Promise<void>((resolve) => {
+    releaseBook = resolve;
+  });
+  const collectionGate = new Promise<void>((resolve) => {
+    releaseCollection = resolve;
+  });
+  const scripts = { book: 0, collection: 0 };
+  const reads = { details: 0, quotes: 0 };
+  await page.route('**/assets/BookPage-*.js', async (route) => {
+    scripts.book++;
+    await bookGate;
+    await route.continue().catch(() => undefined);
+  });
+  await page.route('**/assets/CollectionPage-*.js', async (route) => {
+    scripts.collection++;
+    await collectionGate;
+    await route.continue().catch(() => undefined);
+  });
+  await page.route('**/rest/v1/user_books?*', async (route) => {
+    reads.details++;
+    await route.continue();
+  });
+  await page.route('**/rest/v1/quotes?*', async (route) => {
+    reads.quotes++;
+    await route.continue();
+  });
+  const opening = page
+    .getByRole('status')
+    .filter({ hasText: 'Opening this page…' });
+  try {
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { name: 'Your library.' }),
+    ).toBeVisible();
+    await expect(page.locator('.book-card')).toHaveCount(2);
+    await expect.poll(() => scripts.book, { timeout: 10000 }).toBe(1);
+    await expect.poll(() => scripts.collection, { timeout: 10000 }).toBe(1);
+    // Background code warming does not fetch book records or quotations and
+    // does not advertise an active navigation while the visitor stays put.
+    expect(reads).toEqual({ details: 0, quotes: 0 });
+    await expect(opening).toHaveCount(0);
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+    await page
+      .locator('.book-card')
+      .filter({ hasText: 'Cold book page' })
+      .click();
+    await expect(opening).toBeVisible();
+    await expect(opening.locator('.spinner')).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: 'Main navigation' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Library', exact: true }),
+    ).toBeVisible();
+    await checkA11y(page);
+    await page.screenshot({
+      path: `test-results/cold-route-${test.info().project.name}.png`,
+    });
+    // Leaving the pending route must clear its spinner immediately; its late
+    // module response must not replace the editor or redirect the user.
+    await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Keep a quote.' }),
+    ).toBeVisible();
+    await expect(opening).toHaveCount(0);
+    releaseBook();
+    await expect(
+      page.getByRole('heading', { name: 'Keep a quote.' }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Library', exact: true }).click();
+    await page
+      .locator('.book-card')
+      .filter({ hasText: 'Cold book page' })
+      .click();
+    await expect(
+      page.getByText('A cold book quotation.', { exact: true }),
+    ).toBeVisible();
+    expect(scripts.book).toBe(1);
+    expect(reads).toEqual({ details: 1, quotes: 1 });
+    await page.getByRole('link', { name: 'Library', exact: true }).click();
+    await page
+      .locator('.book-card')
+      .filter({ hasText: 'Cold collection page' })
+      .click();
+    await expect(opening).toBeVisible();
+    releaseCollection();
+    await expect(
+      page.getByText('A cold collection quotation.', { exact: true }),
+    ).toBeVisible();
+    await expect(opening).toHaveCount(0);
+    expect(scripts.collection).toBe(1);
+    await checkA11y(page);
+  } finally {
+    releaseBook();
+    releaseCollection();
+  }
 });

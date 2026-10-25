@@ -1,4 +1,6 @@
 import { loadLibraryPage } from '../../app/pageLoaders';
+import { usePreloadPages } from '../../app/usePreloadPages';
+import { PageBoundary } from './PageBoundary';
 import { Suspense } from 'react';
 import { LoadingIndicator, Spinner } from '../ui/LoadingIndicator';
 import { RequestActivity } from './RequestActivity';
@@ -6,10 +8,18 @@ import { useMutation } from '@tanstack/react-query';
 import { signOut } from '../../services/authService';
 import { message } from '../../lib/validation';
 import { BookOpen, Plus, LogOut } from 'lucide-react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthProvider';
 export function AppShell() {
   const { session } = useAuth();
+  const location = useLocation();
+  usePreloadPages(session?.user.id);
   const navigate = useNavigate();
   const logout = useMutation({
     mutationFn: signOut,
@@ -85,11 +95,20 @@ export function AppShell() {
       )}
       <main id="main" tabIndex={-1}>
         <RequestActivity />
-        <Suspense
-          fallback={<LoadingIndicator>Opening this page…</LoadingIndicator>}
+        <PageBoundary
+          key={`${session?.user.id || 'public'}:${location.pathname}`}
         >
-          <Outlet />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div>
+                <h1 className="sr-only">Opening this page</h1>
+                <LoadingIndicator>Opening this page…</LoadingIndicator>
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
+        </PageBoundary>
       </main>
       <footer>
         <span className="wordmark">dogeard.</span>

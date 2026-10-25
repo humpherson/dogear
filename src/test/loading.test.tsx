@@ -7,9 +7,9 @@ import {
   useMutation,
   useQuery,
 } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { RequestActivity } from '../components/layout/RequestActivity';
 import { AppShell } from '../components/layout/AppShell';
 import { AuthContext } from '../features/auth/AuthProvider';
@@ -200,4 +200,98 @@ it('clears activity when a read is cancelled on unmount', async () => {
   await waitFor(() =>
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument(),
   );
+});
+
+it('shows page loading feedback when navigating from an already rendered page to delayed page code', async () => {
+  const pending = deferred<{ default: () => ReactNode }>();
+  const Page = lazy(() => pending.promise);
+  renderView(
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route
+          index
+          element={
+            <>
+              <h1>Current page</h1>
+              <Link to="/books/example">Open book</Link>
+            </>
+          }
+        />
+        <Route path="/books/example" element={<Page />} />
+      </Route>
+    </Routes>,
+  );
+  await userEvent.click(screen.getByRole('link', { name: 'Open book' }));
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    'Opening this page…',
+  );
+  expect(
+    screen.queryByRole('heading', { name: 'Current page' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('navigation', { name: 'Main navigation' }),
+  ).toBeVisible();
+  await act(async () =>
+    pending.resolve({ default: () => <h1>Book ready</h1> }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'Book ready' }),
+  ).toBeVisible();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});
+
+it('clears the page spinner when navigating away before a module finishes', async () => {
+  const pending = deferred<{ default: () => ReactNode }>();
+  const Page = lazy(() => pending.promise);
+  renderView(
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<Link to="/books/example">Open book</Link>} />
+        <Route path="/books/example" element={<Page />} />
+        <Route path="/quotes/new" element={<h1>Quote editor</h1>} />
+      </Route>
+    </Routes>,
+  );
+  await userEvent.click(screen.getByRole('link', { name: 'Open book' }));
+  await screen.findByRole('status');
+  await userEvent.click(screen.getByRole('link', { name: 'Add quote' }));
+  expect(
+    await screen.findByRole('heading', { name: 'Quote editor' }),
+  ).toBeVisible();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  await act(async () => pending.resolve({ default: () => <h1>Late book</h1> }));
+  expect(
+    screen.queryByRole('heading', { name: 'Late book' }),
+  ).not.toBeInTheDocument();
+});
+it('keeps navigation usable after a page module fails instead of leaving a spinner', async () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    const pending = deferred<{ default: () => ReactNode }>();
+    const Page = lazy(() => pending.promise);
+    renderView(
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route index element={<Link to="/books/example">Open book</Link>} />
+          <Route path="/books/example" element={<Page />} />
+          <Route path="/library" element={<h1>Library ready</h1>} />
+        </Route>
+      </Routes>,
+    );
+    await userEvent.click(screen.getByRole('link', { name: 'Open book' }));
+    await screen.findByRole('status');
+    await act(async () => pending.reject(new Error('Page code unavailable')));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This page couldn’t be opened.',
+    );
+    expect(screen.getByRole('button', { name: 'Refresh app' })).toBeVisible();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('link', { name: 'Library' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Library ready' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  } finally {
+    consoleError.mockRestore();
+  }
 });

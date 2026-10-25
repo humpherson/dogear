@@ -208,3 +208,12 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 - 104 unit tests, 182 local database checks and 26 browser checks passed; four hidden Google discovery browser checks remain skipped. Lint, typecheck, formatting and root/project builds passed.
 - Removed the Open Library link and privacy hint from Add quote only. Descriptions now expand and wrap without internal scrolling on both Add quote and book detail pages.
 - The client privacy fixes and UI follow-ups remain local until the frontend is deployed. No new hosted schema/configuration changes were made by this review.
+
+## 25 October 2026 — first-use page loading and description previews
+
+- Reproduced missing loading feedback when navigating from an already rendered route to a delayed lazy module: the new regression failed before the boundary change and passed afterwards.
+- Route loading/error boundaries now reset by destination and account. The loading state has a visible spinner, readable status and accessible heading, while header navigation stays available. Leaving a pending route clears its spinner, and a late module cannot replace the current route. Module errors offer Refresh app and retain usable navigation.
+- Signed-in Library/Book/Collection code preloads at idle, with a cancellable timer fallback and Save-Data opt-out. Browser checks held BookPage/CollectionPage requests open before any card interaction and verified no per-record book or quote queries were issued by code warming. Existing user-scoped hover/focus/touch record prefetching remains intact. Add quote and authentication remain eager.
+- Descriptions display at most 320 Unicode characters, including literal `...` when truncated, on Add quote and book detail pages. Full stored descriptions are unchanged; both screens retain wrapping without internal scrolling.
+- 117 unit tests passed, covering delayed route transitions, cancellation, module errors, idle scheduling, Save-Data, short/boundary/long descriptions and Unicode truncation. All 28 desktop/mobile browser checks passed, including frozen code downloads, accessibility and direct-account-change isolation. Four hidden Google discovery checks remain skipped.
+- Lint, typecheck, formatting, diff whitespace checks and root/project builds passed. No database or hosted deployment changes were needed or made for this work. Frontend deployment remains pending; no live latency improvement is claimed from fixture-based browser checks.

@@ -78,17 +78,25 @@ export async function searchBooks(term: string, signal?: AbortSignal) {
     q: term.trim(),
     fields: 'key,title,author_name,first_publish_year,cover_i',
     limit: '12',
-    sort: 'new',
   });
   const books = normalizeBooks(
     await requestJson(`https://openlibrary.org/search.json?${params}`, signal),
   );
-  // Keep all matches, favouring known covers within the newest API results.
-  // Stable ties preserve the provider's ordering; unknown years come last.
+  const titleKey = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/^(the|an|a) /, '');
+  const queryTitle = titleKey(term);
+  const exactTitle = (book: BookSearchResult) =>
+    titleKey(book.title) === queryTitle;
+  // Fetch relevant works of any age. Keep exact title matches ahead of related
+  // titles even without a cover; stable ties retain Open Library relevance.
   return books.sort(
     (a, b) =>
-      Number(!!b.cover_url) - Number(!!a.cover_url) ||
-      Number(b.published_date || 0) - Number(a.published_date || 0),
+      Number(exactTitle(b)) - Number(exactTitle(a)) ||
+      Number(!!b.cover_url) - Number(!!a.cover_url),
   );
 }
 export async function getBookDescription(

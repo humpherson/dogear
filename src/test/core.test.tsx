@@ -198,7 +198,7 @@ describe('book autocomplete', () => {
     const requests: string[] = [];
     server.use(
       http.get('https://openlibrary.org/search.json', ({ request }) => {
-        expect(new URL(request.url).searchParams.get('sort')).toBe('new');
+        expect(new URL(request.url).searchParams.has('sort')).toBe(false);
         requests.push(new URL(request.url).searchParams.get('q')!);
         return HttpResponse.json({
           docs: [{ key: '/works/OL1W', title: 'Reading slowly' }],

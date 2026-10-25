@@ -40,6 +40,11 @@ export function BookDetails({
   book: BookSearchResult | BookSummary;
   showOpenLibraryLink?: boolean;
 }) {
+  const characters = Array.from(book.description || '');
+  const description =
+    characters.length > 320
+      ? `${characters.slice(0, 317).join('').trimEnd()}...`
+      : book.description;
   return (
     <section className="book-details">
       <Cover key={book.source_id} book={book} large priority />
@@ -53,7 +58,7 @@ export function BookDetails({
             {book.published_date}
           </p>
         )}
-        {book.description && <p className="description">{book.description}</p>}
+        {description && <p className="description">{description}</p>}
         {book.source === 'google_books' && (
           <p>
             <a
