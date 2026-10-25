@@ -1698,3 +1698,107 @@ test('cold detail-page code shows navigation feedback and idle preloads do not r
     releaseCollection();
   }
 });
+
+test('already preloaded detail modules do not show a code spinner on their first navigation', async ({
+  page,
+}) => {
+  const email = await signup(page);
+  const owner = createClient(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  expect(
+    (
+      await owner.auth.signInWithPassword({
+        email,
+        password: 'Reading-words-123',
+      })
+    ).error,
+  ).toBeNull();
+  const source = `OL${Date.now()}W`;
+  fixtureSources.push(source);
+  expect(
+    (
+      await owner.rpc('save_quote_with_book_result', {
+        book: {
+          source: 'open_library',
+          source_id: source,
+          title: 'Preloaded book',
+          authors: ['A Writer'],
+        },
+        quote: { text: 'A preloaded book quotation.' },
+      })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await owner.rpc('save_collection_quote', {
+        collection_name: 'Preloaded collection',
+        quote: { text: 'A preloaded collection quotation.' },
+      })
+    ).error,
+  ).toBeNull();
+  await page.reload();
+  await expect(page.locator('.book-card')).toHaveCount(2);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            performance
+              .getEntriesByType('resource')
+              .filter((entry) =>
+                /\/(BookPage|CollectionPage)-[^/]+\.js/.test(entry.name),
+              ).length,
+        ),
+      { timeout: 10000 },
+    )
+    .toBe(2);
+  // Wait for the modules' evaluation as well as their network responses. This
+  // reproduces first use after the idle preload has already completed.
+  await page.evaluate(async () => {
+    const urls = performance
+      .getEntriesByType('resource')
+      .filter((entry) =>
+        /\/(BookPage|CollectionPage)-[^/]+\.js/.test(entry.name),
+      )
+      .map((entry) => entry.name);
+    await Promise.all(urls.map((url) => import(url)));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    (window as unknown as { codeSpinnerSeen: boolean }).codeSpinnerSeen = false;
+    new MutationObserver(() => {
+      if (
+        [...document.querySelectorAll('.loading-indicator')].some(
+          (node) =>
+            node.textContent?.includes('Opening this page') &&
+            node.getClientRects().length,
+        )
+      )
+        (window as unknown as { codeSpinnerSeen: boolean }).codeSpinnerSeen =
+          true;
+    }).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+  });
+  await page
+    .locator('.book-card')
+    .filter({ hasText: 'Preloaded book' })
+    .click();
+  await expect(
+    page.getByText('A preloaded book quotation.', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
+  await page
+    .locator('.book-card')
+    .filter({ hasText: 'Preloaded collection' })
+    .click();
+  await expect(
+    page.getByText('A preloaded collection quotation.', { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { codeSpinnerSeen: boolean }).codeSpinnerSeen,
+    ),
+  ).toBe(false);
+});

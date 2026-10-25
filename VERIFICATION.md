@@ -217,3 +217,12 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 - Descriptions display at most 320 Unicode characters, including literal `...` when truncated, on Add quote and book detail pages. Full stored descriptions are unchanged; both screens retain wrapping without internal scrolling.
 - 117 unit tests passed, covering delayed route transitions, cancellation, module errors, idle scheduling, Save-Data, short/boundary/long descriptions and Unicode truncation. All 28 desktop/mobile browser checks passed, including frozen code downloads, accessibility and direct-account-change isolation. Four hidden Google discovery checks remain skipped.
 - Lint, typecheck, formatting, diff whitespace checks and root/project builds passed. No database or hosted deployment changes were needed or made for this work. Frontend deployment remains pending; no live latency improvement is claimed from fixture-based browser checks.
+
+## 25 October 2026 — live loading investigation
+
+- Authenticated live desktop/mobile tests reproduced roughly 320 ms first-use book/collection delays despite completed code downloads. Add quote opened in 27–80 ms; Open Library search took 3.3 seconds with immediate feedback. No browser errors were observed.
+- Shared page loaders now retain resolved components to avoid unnecessary first-use Suspense fallback after preload. Genuine cold downloads retain the route spinner and error handling. No hosted code/schema changes were made.
+- Controlled local production comparisons (three samples per case) reduced median desktop book navigation from 343 to 40 ms and collection navigation from 327 to 28 ms. Mobile CPU-throttled checks also improved. These are local measurements, not deployed improvements.
+- 120 unit tests and 30 browser checks passed; four hidden Google discovery checks remain skipped. Three labelled live test quotes were retained as authorised; existing quotes were unchanged. The test session was revoked with local-scope logout.
+- See `spec/LIVE-LOADING-REVIEW.md` for measurement conditions, limitations and detailed results.
+- Lint, typecheck, formatting, diff whitespace checks and root/project production builds passed. Frontend deployment remains pending.

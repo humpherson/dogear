@@ -1,12 +1,23 @@
-// Reuse the same module loader for React.lazy and intent-based preloading.
-export const loadLibraryPage = () =>
+import { preloadablePage } from './preloadablePage';
+
+const library = preloadablePage(() =>
   import('../pages/LibraryPage').then((module) => ({
     default: module.LibraryPage,
-  }));
-export const loadBookPage = () =>
-  import('../pages/BookPage').then((module) => ({ default: module.BookPage }));
+  })),
+);
+const book = preloadablePage(() =>
+  import('../pages/BookPage').then((module) => ({ default: module.BookPage })),
+);
 
-export const loadCollectionPage = () =>
+const collection = preloadablePage(() =>
   import('../pages/CollectionPage').then((module) => ({
     default: module.CollectionPage,
-  }));
+  })),
+);
+
+export const loadLibraryPage = library.load;
+export const loadBookPage = book.load;
+export const loadCollectionPage = collection.load;
+export const LibraryPage = library.Page;
+export const BookPage = book.Page;
+export const CollectionPage = collection.Page;

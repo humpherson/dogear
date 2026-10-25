@@ -1,21 +1,13 @@
-import {
-  loadLibraryPage,
-  loadBookPage,
-  loadCollectionPage,
-} from './pageLoaders';
+import { LibraryPage, BookPage, CollectionPage } from './pageLoaders';
 import { AuthPage } from '../pages/AuthPage';
 import { AddQuotePage } from '../pages/AddQuotePage';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
-import { lazy } from 'react';
 import { HashRouter, Navigate, Route, Routes, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../features/auth/AuthProvider';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { AppShell } from '../components/layout/AppShell';
 import { LandingPage } from '../pages/LandingPage';
-const LibraryPage = lazy(loadLibraryPage);
-const BookPage = lazy(loadBookPage);
-const CollectionPage = lazy(loadCollectionPage);
 import { config } from '../lib/env';
 const client = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
