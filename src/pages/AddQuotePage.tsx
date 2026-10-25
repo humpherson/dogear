@@ -5,7 +5,11 @@ import {
   type CollectionEntry,
   type CollectionDraft,
 } from '../types';
-import { bookQueryOptions } from '../features/library/libraryQuery';
+import {
+  bookQueryOptions,
+  collectionQueryOptions,
+  cachedCollection,
+} from '../features/library/libraryQuery';
 import { cacheSavedQuote } from '../features/library/quoteCache';
 import { useAuth } from '../features/auth/AuthProvider';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
@@ -23,18 +27,42 @@ import {
   collectionNameSchema,
   type QuoteInput,
 } from '../lib/validation';
+function isSavedCollection(
+  value: CollectionEntry | CollectionDraft,
+): value is CollectionEntry {
+  return 'id' in value && typeof value.id === 'string';
+}
 export function AddQuotePage() {
   const location = useLocation();
+  const { session } = useAuth();
+  const client = useQueryClient();
+  // Browser history survives sign-out and account changes. Never initialise a
+  // new user's editor from a previous user's selected collection or book.
+  const stateOwner =
+    location.state?.ownerId || location.state?.collection?.user_id;
+  const selection = stateOwner === session?.user.id ? location.state : null;
   const [book, setBook] = useState<SelectedBook | null>(
-    location.state?.book || null,
+    selection?.book || null,
   );
-  const [collection, setCollection] = useState<
+  const [draftCollection, setCollection] = useState<
     CollectionEntry | CollectionDraft | null
-  >(location.state?.collection || null);
+  >(null);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<
+    string | undefined
+  >(selection?.collectionId || selection?.collection?.id);
+  const savedCollection = useQuery({
+    ...collectionQueryOptions(session?.user.id, selectedCollectionId || ''),
+    enabled: !!session && !!selectedCollectionId,
+  });
+  const collection: CollectionEntry | CollectionDraft | null =
+    selectedCollectionId
+      ? (savedCollection.data ??
+        cachedCollection(client, session?.user.id, selectedCollectionId) ??
+        null)
+      : draftCollection;
   const [selectedUserBookId, setSelectedUserBookId] = useState<
     string | undefined
-  >(location.state?.userBookId);
-  const { session } = useAuth();
+  >(selection?.userBookId);
   const needsSavedDetails =
     !!book &&
     !!selectedUserBookId &&
@@ -43,8 +71,7 @@ export function AddQuotePage() {
     ...bookQueryOptions(session?.user.id, selectedUserBookId || ''),
     enabled: !!session && needsSavedDetails,
   });
-  const navigate = useNavigate(),
-    client = useQueryClient();
+  const navigate = useNavigate();
   const needsDescription = book?.source === 'open_library' && !('id' in book);
   const description = useQuery({
     queryKey: ['book-description', 'open_library', book?.source_id],
@@ -64,7 +91,7 @@ export function AddQuotePage() {
       if (collection)
         return saveCollectionQuote(
           input,
-          'id' in collection
+          isSavedCollection(collection)
             ? { id: collection.id }
             : {
                 ...collection,
@@ -101,7 +128,7 @@ export function AddQuotePage() {
               <div className="selected-collection-summary">
                 <CollectionDetails {...collection} />
               </div>
-              {!('id' in collection) && (
+              {!isSavedCollection(collection) && (
                 <details className="collection-customise">
                   <summary>Customise collection</summary>
                   <label htmlFor="new-collection-name">Collection name</label>
@@ -126,6 +153,7 @@ export function AddQuotePage() {
                 className="text-button"
                 disabled={mutation.isPending}
                 onClick={() => {
+                  setSelectedCollectionId(undefined);
                   setCollection(null);
                   mutation.reset();
                 }}
@@ -133,9 +161,27 @@ export function AddQuotePage() {
                 Choose a different book or collection
               </button>
             </>
+          ) : selectedCollectionId ? (
+            <>
+              {savedCollection.isPending ? (
+                <LoadingIndicator>Opening your collection…</LoadingIndicator>
+              ) : (
+                <p role="alert">
+                  {savedCollection.isError
+                    ? message(savedCollection.error)
+                    : 'This collection isn’t in your library.'}
+                </p>
+              )}
+              <button
+                className="text-button"
+                onClick={() => setSelectedCollectionId(undefined)}
+              >
+                Choose a different book or collection
+              </button>
+            </>
           ) : book ? (
             <>
-              <BookDetails book={selectedBook!} />
+              <BookDetails book={selectedBook!} showOpenLibraryLink={false} />
               {needsSavedDetails && savedDetails.isPending && (
                 <LoadingIndicator>Loading saved book details…</LoadingIndicator>
               )}
@@ -188,11 +234,13 @@ export function AddQuotePage() {
           ) : (
             <BookPicker
               onSelectCollection={(selected) => {
+                setSelectedCollectionId(undefined);
                 setBook(null);
                 setSelectedUserBookId(undefined);
                 setCollection(selected);
               }}
               onSelect={(selected, id) => {
+                setSelectedCollectionId(undefined);
                 setCollection(null);
                 setBook(selected);
                 setSelectedUserBookId(id);
@@ -205,13 +253,14 @@ export function AddQuotePage() {
             <QuoteForm
               key={
                 collection
-                  ? 'id' in collection
+                  ? isSavedCollection(collection)
                     ? collection.id
                     : 'new-collection'
                   : book!.source_id
               }
               collection={!!collection}
               focusOnMount={!!collection}
+              showPrivacyHint={false}
               onSubmit={(values) => mutation.mutate(values)}
               pending={
                 mutation.isPending ||

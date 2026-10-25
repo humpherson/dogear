@@ -274,15 +274,6 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Json[];
       };
-      get_random_homepage_quote: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          author: string;
-          book_title: string;
-          published_year: string;
-          text: string;
-        }[];
-      };
       get_random_library_entry_quote: {
         Args: { exclude_quote_id?: string };
         Returns: {

@@ -41,7 +41,10 @@ function renderPage(selected: SelectedBook | null = book, userBookId?: string) {
       >
         <MemoryRouter
           initialEntries={[
-            { pathname: '/quotes/new', state: { book: selected, userBookId } },
+            {
+              pathname: '/quotes/new',
+              state: { ownerId: 'reader', book: selected, userBookId },
+            },
           ]}
         >
           <Routes>

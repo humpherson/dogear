@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
@@ -7,87 +6,37 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { LandingQuote } from '../components/quotes/LandingQuote';
 import { LandingPage } from '../pages/LandingPage';
 import { AuthContext, type AuthState } from '../features/auth/AuthProvider';
-import * as samples from '../services/homepageQuotesService';
-const sample = {
-  text: 'A line from the database.',
-  author: 'A Writer',
-  book_title: 'A Book',
-  published_year: '1900',
-};
+import { homepageQuotes } from '../content/homepageQuotes';
 afterEach(() => vi.restoreAllMocks());
 function client() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
-function renderQuote() {
-  return render(
-    <QueryClientProvider client={client()}>
-      <LandingQuote />
-    </QueryClientProvider>,
-  );
-}
-it('renders the selected database text and attribution', async () => {
-  vi.spyOn(samples, 'getRandomHomepageQuote').mockResolvedValue(sample);
-  renderQuote();
-  expect(await screen.findByRole('blockquote')).toHaveTextContent(sample.text);
-  expect(screen.getByText(sample.author)).toBeInTheDocument();
-  expect(screen.getByText('A Book · 1900')).toBeInTheDocument();
-});
-it('shows a loading state without a hard-coded quotation', () => {
-  vi.spyOn(samples, 'getRandomHomepageQuote').mockImplementation(
-    () => new Promise(() => {}),
-  );
-  renderQuote();
-  expect(screen.getByRole('status')).toHaveTextContent('Finding a little quip');
-  expect(screen.queryByRole('blockquote')).not.toBeInTheDocument();
-});
-it('supports an empty sample collection without inventing a fallback quote', async () => {
-  vi.spyOn(samples, 'getRandomHomepageQuote').mockResolvedValue(null);
-  renderQuote();
-  expect(
-    await screen.findByText('A little quip will be here soon.'),
-  ).toBeInTheDocument();
-  expect(screen.queryByRole('blockquote')).not.toBeInTheDocument();
-});
-it('offers a retry when the database is unavailable', async () => {
-  const get = vi
-    .spyOn(samples, 'getRandomHomepageQuote')
-    .mockRejectedValueOnce(new Error('Unavailable'))
-    .mockResolvedValue(sample);
-  renderQuote();
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'We couldn’t load a sample quote.',
-  );
-  await userEvent.click(
-    screen.getByRole('button', { name: 'Try another quote' }),
-  );
-  expect(await screen.findByRole('blockquote')).toHaveTextContent(sample.text);
-  expect(get).toHaveBeenCalledTimes(2);
-});
-it('requests a fresh random sample when the visitor returns to the homepage', async () => {
-  const get = vi
-    .spyOn(samples, 'getRandomHomepageQuote')
-    .mockResolvedValueOnce(sample)
-    .mockResolvedValue({
-      ...sample,
-      text: 'A different database sample.',
-    });
-  const query = client();
-  const first = render(
-    <QueryClientProvider client={query}>
-      <LandingQuote />
-    </QueryClientProvider>,
-  );
-  await screen.findByRole('blockquote');
+it.each([0, 1, 2])(
+  'renders static entry %i immediately with its own attribution',
+  (index) => {
+    vi.spyOn(Math, 'random').mockReturnValue((index + 0.5) / 3);
+    const get = vi.spyOn(globalThis, 'fetch');
+    render(<LandingQuote />);
+    const entry = homepageQuotes[index];
+    expect(screen.getByRole('blockquote').textContent).toBe(entry.text);
+    expect(screen.getByText(entry.author)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${entry.book_title} · ${entry.published_year}`),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(get).not.toHaveBeenCalled();
+  },
+);
+it('keeps its selection on rerender and chooses again on a new visit', () => {
+  const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+  const first = render(<LandingQuote />);
+  expect(screen.getByText('Wrong Hands · 2024')).toBeInTheDocument();
+  random.mockReturnValue(0.99);
+  first.rerender(<LandingQuote />);
+  expect(screen.getByText('Wrong Hands · 2024')).toBeInTheDocument();
   first.unmount();
-  render(
-    <QueryClientProvider client={query}>
-      <LandingQuote />
-    </QueryClientProvider>,
-  );
-  expect(
-    await screen.findByText('A different database sample.'),
-  ).toBeInTheDocument();
-  expect(get).toHaveBeenCalledTimes(2);
+  render(<LandingQuote />);
+  expect(screen.getByText('The Last Dance · 2023')).toBeInTheDocument();
 });
 function renderLanding(state: Partial<AuthState>) {
   return render(
@@ -111,14 +60,14 @@ function renderLanding(state: Partial<AuthState>) {
     </QueryClientProvider>,
   );
 }
-it('does not request samples until initial authentication resolves', () => {
-  const get = vi.spyOn(samples, 'getRandomHomepageQuote');
+it('does not fetch a quote while initial authentication resolves', () => {
+  const get = vi.spyOn(globalThis, 'fetch');
   renderLanding({ loading: true });
   expect(screen.getByRole('status')).toHaveTextContent('Opening Dogeard');
   expect(get).not.toHaveBeenCalled();
 });
-it('redirects signed-in users without fetching a public sample', async () => {
-  const get = vi.spyOn(samples, 'getRandomHomepageQuote');
+it('redirects signed-in users without fetching a homepage quote', async () => {
+  const get = vi.spyOn(globalThis, 'fetch');
   renderLanding({ session: { user: { id: 'reader' } } as Session });
   await waitFor(() =>
     expect(screen.getByText('Private library')).toBeInTheDocument(),

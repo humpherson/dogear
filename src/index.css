@@ -520,8 +520,7 @@ main:has(> .library-page) {
 }
 .description {
   white-space: pre-line;
-  max-height: 240px;
-  overflow: auto;
+  overflow-wrap: anywhere;
 }
 .editor-layout {
   display: grid;
@@ -571,6 +570,9 @@ button.accordion-trigger:focus-visible {
 }
 .accordion-panel {
   padding: 20px;
+}
+.accordion-panel > .search > label:first-child {
+  margin-top: 0;
 }
 .accordion-panel[hidden] {
   display: none;

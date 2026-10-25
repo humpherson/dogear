@@ -35,8 +35,10 @@ export function Cover({
 }
 export function BookDetails({
   book,
+  showOpenLibraryLink = true,
 }: {
   book: BookSearchResult | BookSummary;
+  showOpenLibraryLink?: boolean;
 }) {
   return (
     <section className="book-details">
@@ -76,17 +78,19 @@ export function BookDetails({
             </a>
           </p>
         )}
-        {book.source === 'open_library' && /^OL\d+W$/.test(book.source_id) && (
-          <p>
-            <a
-              href={`https://openlibrary.org/works/${book.source_id}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on Open Library
-            </a>
-          </p>
-        )}
+        {showOpenLibraryLink &&
+          book.source === 'open_library' &&
+          /^OL\d+W$/.test(book.source_id) && (
+            <p>
+              <a
+                href={`https://openlibrary.org/works/${book.source_id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View on Open Library
+              </a>
+            </p>
+          )}
       </div>
     </section>
   );

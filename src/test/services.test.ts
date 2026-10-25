@@ -80,27 +80,6 @@ it('rejects invalid and non-HTTP backend URLs', () => {
   expect(isSupabaseUrl('invalid')).toBe(false);
 });
 
-import { getRandomHomepageQuote } from '../services/homepageQuotesService';
-it('requests one random public sample through the dedicated RPC', async () => {
-  const sample = {
-    text: 'A sample',
-    author: 'Writer',
-    book_title: 'Book',
-    published_year: '1900',
-  };
-  rpc.mockResolvedValue({ data: [sample], error: null });
-  expect(await getRandomHomepageQuote()).toEqual(sample);
-  expect(rpc).toHaveBeenCalledWith('get_random_homepage_quote');
-  expect(from).not.toHaveBeenCalled();
-});
-it('returns null for an empty sample pool and propagates database errors', async () => {
-  rpc
-    .mockResolvedValueOnce({ data: [], error: null })
-    .mockResolvedValueOnce({ data: null, error: new Error('Unavailable') });
-  expect(await getRandomHomepageQuote()).toBeNull();
-  await expect(getRandomHomepageQuote()).rejects.toThrow('Unavailable');
-});
-
 import { getRandomLibraryQuote } from '../services/libraryQuotesService';
 it('requests an owner-only random quote while excluding the current quote ID', async () => {
   const quote = {

@@ -49,8 +49,8 @@ export function LandingPage() {
           <LockKeyhole />
           <h2>Make it yours</h2>
           <p>
-            A personal library with private notes. Saved quote text and book
-            attribution may appear on the public homepage.
+            A personal library with private notes. Keep your favourite lines
+            together, from books and beyond.
           </p>
         </article>
       </section>

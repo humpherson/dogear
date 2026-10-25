@@ -6,6 +6,7 @@ import { quoteSchema, type QuoteInput } from '../../lib/validation';
 export function QuoteForm({
   collection = false,
   focusOnMount = false,
+  showPrivacyHint = true,
   showCredits = collection,
   initial,
   onSubmit,
@@ -17,6 +18,7 @@ export function QuoteForm({
 }: {
   collection?: boolean;
   focusOnMount?: boolean;
+  showPrivacyHint?: boolean;
   showCredits?: boolean;
   initial?: QuoteInput;
   onSubmit: (data: QuoteInput) => void;
@@ -64,7 +66,11 @@ export function QuoteForm({
         placeholder="A sentence, a passage, a little perspective…"
         {...register('text')}
         aria-invalid={!!errors.text}
-        aria-describedby={`${id}-quote-text-error ${id}-visibility`}
+        aria-describedby={
+          showPrivacyHint
+            ? `${id}-quote-text-error ${id}-visibility`
+            : `${id}-quote-text-error`
+        }
       />
       <p id={`${id}-quote-text-error`} className="field-error">
         {errors.text?.message}
@@ -132,10 +138,11 @@ export function QuoteForm({
           {error}
         </p>
       )}
-      <p id={`${id}-visibility`} className="hint">
-        Quote text and author/source credits may appear on the public homepage.
-        Collection names, notes, references and account details stay private.
-      </p>
+      {showPrivacyHint && (
+        <p id={`${id}-visibility`} className="hint">
+          Collection names, notes, references and account details stay private.
+        </p>
+      )}
       <div className="actions">
         <button
           disabled={pending || disabled}

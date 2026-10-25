@@ -8,7 +8,7 @@ export function ProtectedRoute() {
     return <LoadingIndicator>Opening your library…</LoadingIndicator>;
   if (error) return <p role="alert">{error}</p>;
   return session ? (
-    <Outlet />
+    <Outlet key={session.user.id} />
   ) : (
     <Navigate
       to="/login"

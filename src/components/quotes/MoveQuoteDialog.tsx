@@ -221,7 +221,7 @@ export function MoveQuoteDialog({
                 disabled={mutation.isPending}
               />
               <p className="hint">
-                Quote text and these credits can appear publicly. Collection
+                Review the author and source credits for this quote. Collection
                 names, notes and references stay private.
               </p>
               {(error || mutation.isError) && (

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
@@ -147,74 +148,122 @@ try {
     'anonymous users cannot invoke the library sampler',
   );
 
-  const pool = await admin
-    .from('quotes')
-    .select(
-      'text,credit_mode,credit_author,credit_source,credit_year,user_books(books(title,authors,published_date))',
-    );
-  assert.ifError(pool.error);
-  const publicPool = pool.data.map((row) => ({
-    text: row.text,
-    author:
-      row.credit_mode === 'custom'
-        ? row.credit_author
-        : row.user_books.books.authors.join(', ') || 'Unknown author',
-    book_title:
-      row.credit_mode === 'custom'
-        ? row.credit_source
-        : row.user_books.books.title,
-    published_year:
-      row.credit_mode === 'custom'
-        ? row.credit_year
-        : row.user_books.books.published_date?.slice(0, 4) || null,
-  }));
-  for (const client of [anon, a.client, b.client]) {
-    const random = await client.rpc('get_random_homepage_quote');
-    assert.ifError(random.error);
+  for (const [role, client] of [
+    ['anonymous', anon],
+    ['owner', a.client],
+    ['other user', b.client],
+  ]) {
+    const retired = await client.rpc('get_random_homepage_quote');
     check(
-      random.data.length === 1,
-      'homepage RPC returns exactly one user-added quote',
-    );
-    const shown = random.data[0];
-    check(
-      publicPool.some(
-        (row) =>
-          row.text === shown.text &&
-          row.author === shown.author &&
-          row.book_title === shown.book_title &&
-          row.published_year === shown.published_year,
-      ),
-      'homepage quote and attribution come from saved user quotations',
+      !!retired.error && retired.data === null,
+      `${role} cannot call the retired public quote sampler`,
     );
     check(
-      JSON.stringify(Object.keys(shown).sort()) ===
-        JSON.stringify(
-          ['text', 'author', 'book_title', 'published_year'].sort(),
-        ),
-      'homepage exposes only quotation text and book attribution',
-    );
-    check(
-      !JSON.stringify(shown).includes('Private note') &&
-        !JSON.stringify(shown).includes(a.id) &&
-        !JSON.stringify(shown).includes(b.id),
-      'homepage projection excludes notes and user identities',
+      retired.status >= 400 && retired.status < 500,
+      `${role} receives an access/missing-function response, not an internal failure`,
     );
   }
-  check(
-    !!(await anon.rpc('get_random_homepage_quote', { user_id: b.id })).error,
-    'homepage RPC does not accept user identifiers or private-field arguments',
-  );
   check(
     !!(await anon.rpc('get_random_sample_quote')).error,
     'editorial sample RPC has been removed',
   );
 
-  for (const table of ['profiles', 'books', 'user_books', 'quotes'])
+  for (const table of [
+    'profiles',
+    'books',
+    'user_books',
+    'quotes',
+    'collections',
+  ])
     check(
       !!(await anon.from(table).select('*')).error,
       `anonymous ${table} read denied`,
     );
   check(!!(await save(anon)).error, 'anonymous RPC denied');
+
+  for (const role of [anon, a.client, b.client]) {
+    for (const [name, args] of [
+      ['collection_quote_payload', { input: { text: 'Internal helper' } }],
+      ['library_entry_result', { entry_kind: 'book', entry_id: user_book_id }],
+    ]) {
+      const result = await role.rpc(name, args);
+      check(
+        !!result.error && result.data === null,
+        `${name} is not a client-callable API`,
+      );
+    }
+  }
+  const forgery = [
+    Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString(
+      'base64url',
+    ),
+    Buffer.from(
+      JSON.stringify({
+        sub: b.id,
+        role: 'authenticated',
+        aud: 'authenticated',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      }),
+    ).toString('base64url'),
+    'a'.repeat(43),
+  ].join('.');
+  for (const token of ['invalid-jwt', forgery]) {
+    const response = await fetch(`${url}/rest/v1/quotes?select=id&limit=0`, {
+      headers: { apikey: key, Authorization: `Bearer ${token}` },
+    });
+    check(
+      [401, 403].includes(response.status),
+      'invalid or forged user session rejected before accessing quotes',
+    );
+  }
+  for (const [role, client, expectedId] of [
+    ['owner', a.client, a.id],
+    ['other user', b.client, b.id],
+  ]) {
+    const session = (await client.auth.getSession()).data.session;
+    const graphql = await fetch(`${url}/graphql/v1`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `{ profilesCollection { edges { node { id } } } }`,
+      }),
+    });
+    const payload = await graphql.json();
+    if (
+      payload.errors?.[0]?.message === 'pg_graphql extension is not enabled.'
+    ) {
+      check(
+        !payload.data,
+        `${role} GraphQL endpoint is closed because pg_graphql is disabled`,
+      );
+      continue;
+    }
+    assert.ifError(payload.errors?.[0]);
+    check(
+      !payload.errors &&
+        payload.data.profilesCollection.edges.length === 1 &&
+        payload.data.profilesCollection.edges[0].node.id === expectedId,
+      `${role} GraphQL access returns only its own profile`,
+    );
+  }
+  const anonymousGraphql = await fetch(`${url}/graphql/v1`, {
+    method: 'POST',
+    headers: { apikey: key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query: '{ profilesCollection { edges { node { id } } } }',
+    }),
+  });
+  const anonymousGraphqlPayload = await anonymousGraphql.json();
+  check(
+    !anonymousGraphqlPayload.data?.profilesCollection &&
+      !!anonymousGraphqlPayload.errors,
+    'anonymous GraphQL cannot access profiles',
+  );
+
   check(
     !!(
       await a.client.from('quotes').insert({

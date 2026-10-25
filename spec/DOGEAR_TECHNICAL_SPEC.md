@@ -7,7 +7,7 @@
 
 ## 1. Objective
 
-Build a responsive, accessible web application with private notes/account data and public homepage sampling of all saved quote text in which authenticated users can search for books, select a book, save multiple quotations against it, and browse their personal library. A book enters a user's library when their first quote is saved. The application must build as static assets and deploy to GitHub Pages. Supabase supplies authentication and persistent storage; no custom always-on backend is permitted.
+Build a responsive, accessible web application with private notes/account data and a static editorial homepage quote in which authenticated users can search for books, select a book, save multiple quotations against it, and browse their personal library. A book enters a user's library when their first quote is saved. The application must build as static assets and deploy to GitHub Pages. Supabase supplies authentication and persistent storage; no custom always-on backend is permitted.
 
 **Implementation principle:** Deliver a working vertical slice, not just mocked pages. Where third-party credentials are absent, provide an explicit setup state and documented local instructions; never pretend persistence or authentication works.
 
@@ -17,7 +17,7 @@ Build a responsive, accessible web application with private notes/account data a
 
 - React application scaffold, routing, design system, responsive layouts, accessible UI components.
 - Supabase email/password sign-up, sign-in, sign-out, email verification handling, password reset, and session persistence.
-- Database migrations and RLS policies for profiles, books, user_books, quotes, and the narrowly scoped public homepage quote projection.
+- Database migrations and RLS policies for profiles, books, user_books, quotes, and retirement of the historical public homepage quote projection.
 - Open Library title/author search with debounced autocomplete, cover thumbnails, author and date metadata, description fetched after selection, and result selection.
 - Save, view, edit, and delete quotes; optional page number and private note.
 - Personal library displaying each saved book once with quote count.
@@ -144,9 +144,11 @@ Enforce that `quotes.user_id` matches the `user_books.user_id` of its parent via
 
 Implement an authenticated `save_quote_with_book` RPC/transaction that: validates input, finds or creates a catalog book safely, finds or creates the caller's `user_books` row, inserts the quote, and returns the quote and user-book IDs. Derive user identity from `auth.uid()` rather than accepting a trusted user ID from the client. Handle concurrent saves with unique constraints and `ON CONFLICT`. Use appropriately restricted `SECURITY DEFINER` only if necessary, fixed `search_path`, explicit grants, and no broad bypass of RLS. Add a transactional delete operation or trigger that removes `user_books` after the last quote is deleted, with concurrency safety.
 
-### Public homepage sampling of user quotes
+### Static public homepage quotations
 
-The signed-out homepage selects at most one random quote from **all actual user-added quotes**, including existing and future saves. There is no opt-in flag, editorial sample collection, or hard-coded fallback. `get_random_homepage_quote()` returns only quote text, book author, book title, and publication year. Its read-only security-definer query uses a fixed empty search path, fully qualified tables, explicit execute grants to anonymous/authenticated roles, and no caller arguments. Preserve all existing raw-table grants, RLS, relational ownership constraints, and owner-only mutation rules. Never return notes, page references, account/user IDs, library-association IDs, or creation timestamps. Display public-text/private-note visibility clearly on the homepage and quote form. Fetch freshly per homepage visit; random repeats are allowed. Handle empty, loading, and retryable-error states explicitly and show the full quotation without an internal scroll area.
+The signed-out homepage immediately displays one of three site-owner-supplied static entries from `src/content/homepageQuotes.ts`. Choose randomly once per component mount, keep the choice stable during the visit, and permit repeats. Store each quotation with its author, book and publication year; retain the owner-supplied wording and credits, including identical text on two entries. Do not request saved user quotes or show a quote-loading state. Show the full quotation without an internal scroll area.
+
+Remove the historical security-definer `get_random_homepage_quote()` RPC with migration `202610250001_retire_public_quote_sampler.sql` and remove its unused frontend service. Anonymous and authenticated callers must no longer obtain a random projection of another user's quotation text or credits. Refresh the REST schema cache after dropping the function, preserve raw-table RLS and ownership constraints, and verify anonymous, owner and other-user calls fail with no data. Do not delete saved data. The signed-in personal library hero continues to sample only the caller's own saved quotes. Apply the migration to hosted Supabase as well as locally; frontend deployment alone cannot revoke database access.
 
 ## 7. RLS and security requirements
 
@@ -327,7 +329,7 @@ Each quote belongs to exactly one owned book association or collection, enforced
 
 Optional quote-level author/speaker and source credits are independent of the private collection name. Book quotes initially derive attribution from immutable book metadata. Moving snapshots those credits; users can review or clear them. Blank credits remain blank. Moves retain quote IDs, creation dates, content, notes and references, and can create a collection atomically. Source changes clear publication years. All mutations share the per-user library transaction lock before existing book locks.
 
-The public homepage samples all saved quotation text with its effective credits, returning exactly text, author, book_title (legacy alias for source) and published_year. It never returns collection names or private fields. The separate authenticated hero samples the caller's books and collections and includes the private destination needed for navigation. New RPCs restrict execution and enforce caller ownership; direct collection/quote-parent writes remain denied. Collection tables use RLS. User-scoped caches update from canonical mutation results, with targeted background reconciliation.
+The public homepage uses three static editorial entries. The historical public sampler is retired; quotation text and credits are owner-only under RLS, along with collection names, notes and other private fields. The separate authenticated hero samples only the caller's books and collections and includes the private destination needed for navigation. RPCs restrict execution and enforce caller ownership; direct collection/quote-parent writes remain denied. Collection tables use RLS. User-scoped caches update from canonical mutation results, with targeted background reconciliation.
 
 Collection appearance: thumbnails display the collection name with a single-line ellipsis for long names. Background, icon, text and border colours are editable at creation (including creation during a move) and from Edit collection alongside the name. Existing collections receive paper/forest/gold defaults. Store colours on the private collection as validated six-digit hex values; reject invalid values atomically and preserve caller ownership checks. Library, picker and detail views reuse saved appearance and existing thumbnail dimensions.
 
@@ -335,7 +337,7 @@ Colour selection uses a fixed, coordinated palette of 12 named swatches for each
 
 Each appearance field uses a compact dropdown showing its current colour chip and name. Only one palette opens at a time; choosing a swatch closes it and returns focus to the trigger. Escape or clicking outside closes the palette. The panel expands within the form so it remains usable inside scrolling mobile dialogs.
 
-Collection icons use a compact dropdown with labelled icon previews, native radio choices, 44 px tap targets and the same close/focus behaviour as colour dropdowns. Persist one allowlisted icon ID on each private collection: layers (default), music, tv, book, speech, paw-print, user, face-grinning, face-slightly-frowning, star or brush. Creation, edit and move-to-new-collection support the icon choice. Preserve icons on colour-only/name-only edits and preserve the existing icon colour. Existing collections default to layers. The public quote projection is unchanged.
+Collection icons use a compact dropdown with labelled icon previews, native radio choices, 44 px tap targets and the same close/focus behaviour as colour dropdowns. Persist one allowlisted icon ID on each private collection: layers (default), music, tv, book, speech, paw-print, user, face-grinning, face-slightly-frowning, star or brush. Creation, edit and move-to-new-collection support the icon choice. Preserve icons on colour-only/name-only edits and preserve the existing icon colour. Existing collections default to layers. The historical public quote projection remains retired.
 
 Temporary UI scope: hide the four colour dropdowns on every collection appearance form while retaining the icon picker, colour UI code, validation, storage and rendering. Preserve saved colours when editing names/icons or adding quotes.
 

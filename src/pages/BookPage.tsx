@@ -70,7 +70,7 @@ export function BookPage() {
         <Link
           className="button"
           to="/quotes/new"
-          state={{ book: entry.books, userBookId }}
+          state={{ ownerId: entry.user_id, book: entry.books, userBookId }}
         >
           Add another quote
         </Link>

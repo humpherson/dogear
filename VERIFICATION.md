@@ -187,3 +187,24 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 - Hosted Supabase, production SMTP, deployment-domain callbacks, and GitHub Pages publication remain unverified. No remote is configured and nothing was published. Follow README for setup and apply all migrations before deploying the updated frontend.
 - Register the deployed application with Open Library as requested by its usage guidance. For frequent/shared-IP use, arrange identification and shared caching/rate limiting; the static per-tab client does not claim an identified-client allowance.
 - Manual entry remains deferred. Legacy Google and Open Library books are preserved as separate provider records; they are not automatically merged.
+
+## 25 October 2026 — static homepage and private saved quotations
+
+- Homepage selects one of three owner-supplied static entries per visit, with no quote RPC call. The first two entries retain identical text and different attributions as supplied.
+- Removed obsolete publication notices from the landing page, quote form and move dialog, and removed the unused homepage quote service.
+- Applied `202610250001_retire_public_quote_sampler.sql` locally and to the linked hosted project after a dry run confirmed it was the only pending migration. Verified that the linked project matches the backend in the live dogeard.co.uk assets.
+- Verified the live retired endpoint using the site's public API key: HTTP 404 / PGRST202, with no quotation data. No saved quotes, credits, notes or library entries were deleted.
+- Local checks: 102 unit tests, 76 book database checks, 94 collection database checks and 24 desktop/mobile browser checks passed. Four hidden Google discovery browser checks remain skipped. Lint, typecheck, formatting and root/project builds passed. Database checks cover anonymous, owner and other-user denial of the retired endpoint, and existing owner-only library access.
+- Removed the first search label's extra top margin inside the new-book accordion, retaining panel padding.
+- Hosted database privacy changes are applied; deployment of the static homepage and spacing changes remains pending. Older deployed frontend code that requests the retired RPC receives an error until redeployed.
+
+## 25 October 2026 — security review and editor follow-ups
+
+- Reproduced two failures for account-switch/editor draft and retained-history isolation before fixing them. Protected route state now resets by user ID; editor selections are owner-scoped; new collection history contains IDs rather than private names.
+- Compared local/hosted public schema definitions without user-row exports. Policies, grants and functions match, with only collection column ordering differing. Existing tables enforce RLS and anonymous denial; no retired sampler remains.
+- Fourteen live anonymous/invalid-session probes passed. Twenty-four live synthetic-account checks passed, including cross-user denial for reads, nested reads, edits, deletes, moves and attaching a quote to another user's collection. Both temporary accounts were removed and cleanup verified; no existing-user records were inspected.
+- Live anonymous sign-in and email auto-confirmation are disabled. GraphQL is disabled locally and remotely. HTTP redirects to HTTPS. Remaining permissive future-object default grants and missing browser policy headers are documented in `spec/SECURITY-REVIEW.md` as follow-up hardening, not current demonstrated user-data leaks.
+- Scanned 92 tracked text files and five discovered live JavaScript assets for privileged credential literals/JWTs; none found. Private env files are not tracked. Production dependency audit found zero known vulnerabilities.
+- 104 unit tests, 182 local database checks and 26 browser checks passed; four hidden Google discovery browser checks remain skipped. Lint, typecheck, formatting and root/project builds passed.
+- Removed the Open Library link and privacy hint from Add quote only. Descriptions now expand and wrap without internal scrolling on both Add quote and book detail pages.
+- The client privacy fixes and UI follow-ups remain local until the frontend is deployed. No new hosted schema/configuration changes were made by this review.

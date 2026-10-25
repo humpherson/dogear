@@ -174,7 +174,11 @@ export function CollectionPage() {
             ({entry.quotes[0]?.count ?? quotes.data?.length ?? 0})
           </span>
         </h1>
-        <Link className="button" to="/quotes/new" state={{ collection: entry }}>
+        <Link
+          className="button"
+          to="/quotes/new"
+          state={{ ownerId: entry.user_id, collectionId: entry.id }}
+        >
           Add another quote
         </Link>
       </div>

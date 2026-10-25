@@ -409,17 +409,17 @@ try {
       hero.author === null,
     'private hero separates grouping from optional credits',
   );
-  const publicRows = await rpc(anon, 'get_random_homepage_quote');
-  check(
-    JSON.stringify(Object.keys(publicRows[0]).sort()) ===
-      JSON.stringify(['author', 'book_title', 'published_year', 'text']),
-    'public projection remains exactly four permitted fields',
-  );
-  check(
-    !JSON.stringify(publicRows).includes('Never public collection name') &&
-      !JSON.stringify(publicRows).includes('Private note'),
-    'public sample excludes collection names and private notes',
-  );
+  for (const [role, client] of [
+    ['anonymous', anon],
+    ['owner', a.client],
+    ['other user', b.client],
+  ]) {
+    const retired = await client.rpc('get_random_homepage_quote');
+    check(
+      !!retired.error && retired.data === null,
+      `${role} cannot sample collection quotes through the retired public RPC`,
+    );
+  }
   const left = await make(a.client, 'Concurrent left'),
     right = await make(a.client, 'Concurrent right');
   await add(a.client, left.library_entry.id);

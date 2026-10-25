@@ -74,31 +74,22 @@ test.afterEach(async () => {
     await admin.from('books').delete().in('source_id', fixtureSources);
   fixtureSources.length = 0;
 });
-test('shows startup feedback and keeps the homepage visible during a slow quote request', async ({
+test('shows startup feedback then a static homepage quote without a database request', async ({
   page,
 }) => {
   let releaseScript!: () => void;
-  let releaseQuote!: () => void;
   const scriptGate = new Promise<void>((resolve) => {
     releaseScript = resolve;
   });
-  const quoteGate = new Promise<void>((resolve) => {
-    releaseQuote = resolve;
-  });
+  let quoteRequests = 0;
   await page.route('**/assets/index-*.js', async (route) => {
     await scriptGate;
     await route.continue();
   });
-  await page.route(
-    '**/rest/v1/rpc/get_random_homepage_quote',
-    async (route) => {
-      await quoteGate;
-      await route.fulfill({
-        status: 503,
-        json: { message: 'Temporarily unavailable' },
-      });
-    },
-  );
+  await page.route('**/rest/v1/rpc/get_random_homepage_quote', (route) => {
+    quoteRequests++;
+    return route.abort();
+  });
   try {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('', { waitUntil: 'commit' });
@@ -108,31 +99,14 @@ test('shows startup feedback and keeps the homepage visible during a slow quote 
     await expect(page.locator('.startup-spinner')).toBeVisible();
     releaseScript();
     await expect(page.locator('.lead')).toBeVisible();
-    await expect(
-      page.locator('.literary-card .loading-indicator'),
-    ).toContainText('Finding a little quip');
-    await expect(
-      page.getByRole('progressbar', { name: 'Request in progress' }),
-    ).toBeVisible();
-    expect(
-      await page
-        .locator('.literary-card .spinner')
-        .evaluate((element) => getComputedStyle(element).animationName),
-    ).toBe('none');
-    await checkA11y(page);
-    await page.screenshot({
-      path: `test-results/loading-${test.info().project.name}.png`,
-    });
-    releaseQuote();
-    await expect(page.locator('.literary-card [role="alert"]')).toContainText(
-      'We couldn’t load a sample quote.',
+    await expect(page.locator('.literary-card blockquote')).toBeVisible();
+    await expect(page.locator('.literary-card .loading-indicator')).toHaveCount(
+      0,
     );
-    await expect(page.getByRole('progressbar')).toHaveCount(0);
-    await expect(page.locator('.literary-card .spinner')).toHaveCount(0);
-    await expect(page.locator('.lead')).toBeVisible();
+    expect(quoteRequests).toBe(0);
+    await checkA11y(page);
   } finally {
     releaseScript();
-    releaseQuote();
   }
 });
 
@@ -140,65 +114,6 @@ test('landing, private-route refresh, callback errors, and accessibility', async
   page,
 }) => {
   await page.goto('');
-  const initial = await admin
-    .from('quotes')
-    .select('id', { count: 'exact', head: true });
-  expect(initial.error).toBeNull();
-  if (!initial.count) {
-    await expect(
-      page.getByText('A little quip will be here soon.'),
-    ).toBeVisible();
-  }
-  const email = `homepage-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`,
-    password = 'Homepage-words-123';
-  created.push(email);
-  const account = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  expect(account.error).toBeNull();
-  const owner = createClient(local.API_URL, local.ANON_KEY, {
-    auth: { persistSession: false },
-  });
-  expect(
-    (await owner.auth.signInWithPassword({ email, password })).error,
-  ).toBeNull();
-  const source = `OL${Date.now()}W`;
-  fixtureSources.push(source);
-  const saved = await owner.rpc('save_quote_with_book', {
-    book: {
-      source: 'open_library',
-      source_id: source,
-      title: 'A Book Shared Through Words',
-      authors: ['A Book Author'],
-      published_date: '1900',
-    },
-    quote: {
-      text: 'A user-added quotation for the homepage.',
-      note: 'A note only the owner should read.',
-      page_number: '42',
-    },
-  });
-  expect(saved.error).toBeNull();
-  const pool = await admin
-    .from('quotes')
-    .select('text,user_books(books(title,authors,published_date))');
-  expect(pool.error).toBeNull();
-  const fresh = page.waitForResponse((response) =>
-    response.url().endsWith('/rpc/get_random_homepage_quote'),
-  );
-  await page.reload();
-  const response = await fresh;
-  expect(response.status()).toBe(200);
-  const payload = await response.json();
-  expect(payload).toHaveLength(1);
-  expect(Object.keys(payload[0]).sort()).toEqual([
-    'author',
-    'book_title',
-    'published_year',
-    'text',
-  ]);
   await expect(page.getByText('A little quip', { exact: true })).toBeVisible();
   await expect(page.locator('.lead')).toHaveText(
     'A little space for words that matter. Give them a place to live — a personal collection of quotes, quips, and lines worth remembering.',
@@ -206,16 +121,12 @@ test('landing, private-route refresh, callback errors, and accessibility', async
   await expect(page.locator('html')).toHaveAttribute('lang', 'en-GB');
   const shown = page.locator('.literary-card blockquote');
   await expect(shown).toBeVisible();
-  const text = await shown.innerText();
-  const matching = pool.data!.find((row) => row.text === text);
-  expect(matching).toBeTruthy();
-  await expect(page.locator('.literary-card')).toContainText(
-    matching!.user_books?.books.title || payload[0].book_title || '',
-  );
-  await expect(page.locator('.literary-card')).not.toContainText(
-    'A note only the owner should read.',
-  );
-  await expect(page.locator('.literary-card')).not.toContainText(email);
+  const attribution = await page.locator('.literary-card .muted').innerText();
+  expect([
+    'Wrong Hands · 2024',
+    'Dark Matter · 2016',
+    'The Last Dance · 2023',
+  ]).toContain(attribution);
   await expect(
     page.getByRole('heading', { name: /Keep the words/ }),
   ).toBeVisible();
@@ -1580,4 +1491,75 @@ test('collection layouts fit review viewports and preserve drafts and visible di
   await checkA11y(page);
   await move.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(move).not.toBeVisible();
+});
+
+test('direct account changes discard private editor state and retained collection history', async ({
+  page,
+}) => {
+  await signup(page);
+  await page.getByRole('link', { name: 'Add quote', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Create a collection', exact: true })
+    .click();
+  await page
+    .getByLabel('Collection name')
+    .fill('Security review private collection A');
+  await page.getByRole('button', { name: 'Use this collection' }).click();
+  await page
+    .getByLabel('The words you want to keep')
+    .fill('A stored private quotation.');
+  await page.getByRole('button', { name: 'Keep this quote' }).click();
+  await expect(page).toHaveURL(/#\/collections\//);
+  const collectionUrl = page.url();
+  await page.getByRole('link', { name: 'Add another quote' }).click();
+  await expect(page.getByLabel('The words you want to keep')).toBeVisible();
+  expect(
+    await page.evaluate(() => JSON.stringify(window.history.state)),
+  ).not.toContain('Security review private collection A');
+  await page
+    .getByLabel('The words you want to keep')
+    .fill('An unsaved private draft from A');
+  const email = `direct-switch-${Date.now()}@example.test`,
+    password = 'Separate-accounts-123';
+  created.push(email);
+  const account = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  expect(account.error).toBeNull();
+  const client = createClient(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  const login = await client.auth.signInWithPassword({ email, password });
+  expect(login.error).toBeNull();
+  await page.evaluate((session) => {
+    const key = Object.keys(localStorage).find((name) =>
+      /^sb-.+-auth-token$/.test(name),
+    );
+    if (!key) throw new Error('No local auth storage key');
+    localStorage.setItem(key, JSON.stringify(session));
+    const channel = new BroadcastChannel(key);
+    channel.postMessage({ event: 'SIGNED_IN', session });
+    channel.close();
+  }, login.data.session);
+  await expect(
+    page.getByText('Security review private collection A', { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel('The words you want to keep')).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'Create a collection', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Security review private collection A', { exact: true }),
+  ).toHaveCount(0);
+  await page.goto(collectionUrl);
+  await expect(
+    page.getByRole('heading', { name: 'Collection not found' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('A stored private quotation.', { exact: true }),
+  ).toHaveCount(0);
+  await checkA11y(page);
 });
