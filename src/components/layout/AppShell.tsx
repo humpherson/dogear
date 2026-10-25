@@ -1,3 +1,4 @@
+import { Wordmark } from './Wordmark';
 import { loadLibraryPage } from '../../app/pageLoaders';
 import { usePreloadPages } from '../../app/usePreloadPages';
 import { PageBoundary } from './PageBoundary';
@@ -41,7 +42,7 @@ export function AppShell() {
       </a>
       <header className="site-header">
         <Link className="wordmark" to="/">
-          dogeard<span>.</span>
+          <Wordmark />
         </Link>
         <nav aria-label="Main navigation">
           {session ? (
@@ -111,7 +112,9 @@ export function AppShell() {
         </PageBoundary>
       </main>
       <footer>
-        <span className="wordmark">dogeard.</span>
+        <span className="wordmark">
+          <Wordmark />
+        </span>
         <span>A little space for words that matter.</span>
       </footer>
     </>

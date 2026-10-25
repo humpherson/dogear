@@ -1,3 +1,4 @@
+import { Wordmark } from '../components/layout/Wordmark';
 import { LibraryPage, BookPage, CollectionPage } from './pageLoaders';
 import { AuthPage } from '../pages/AuthPage';
 import { AddQuotePage } from '../pages/AddQuotePage';
@@ -38,7 +39,9 @@ export function App({ callbackError }: { callbackError?: string }) {
   if (!config)
     return (
       <main className="setup">
-        <span className="wordmark">dogeard.</span>
+        <span className="wordmark">
+          <Wordmark />
+        </span>
         <h1>A little setup first.</h1>
         <p>
           Dogeard needs Supabase to save your library and keep your notes

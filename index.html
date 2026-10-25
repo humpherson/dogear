@@ -12,7 +12,7 @@
       name="description"
       content="Dogeard — a private home for the words that stay with you."
     />
-    <title>Dogeard — Keep the words that stay with you.</title>
+    <title>dog-eard — Keep the words that stay with you.</title>
     <style>
       body {
         margin: 0;
@@ -31,9 +31,23 @@
         text-align: center;
       }
       .app-startup strong {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        letter-spacing: -0.08em;
+        white-space: nowrap;
         font:
           bold 32px Georgia,
           serif;
+      }
+      .app-startup .wordmark-hyphen {
+        display: inline-block;
+        letter-spacing: 0;
+        margin-inline: 0.06em;
+      }
+      .app-startup .wordmark-dot {
+        color: #96713d;
       }
       .startup-spinner {
         display: inline-block;
@@ -51,6 +65,11 @@
           transform: rotate(360deg);
         }
       }
+      .app-startup .wordmark-logo {
+        display: block;
+        width: 48px;
+        height: auto;
+      }
       @media (prefers-reduced-motion: reduce) {
         .startup-spinner {
           animation: none;
@@ -61,10 +80,25 @@
   <body>
     <div id="root">
       <div class="app-startup" role="main">
-        <strong>dogeard.</strong>
+        <strong>
+          <img
+            class="wordmark-logo"
+            src="%BASE_URL%dogeard-logo.svg"
+            width="48"
+            height="28"
+            alt=""
+            aria-hidden="true"
+          />
+          <span
+            >dog<span class="wordmark-hyphen">&#8208;</span>eard<span
+              class="wordmark-dot"
+              >.</span
+            ></span
+          >
+        </strong>
         <div role="status">
           <span class="startup-spinner" aria-hidden="true"></span>
-          Opening Dogeard…
+          Opening dog-eard…
         </div>
       </div>
     </div>

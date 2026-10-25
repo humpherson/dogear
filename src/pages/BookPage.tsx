@@ -49,7 +49,7 @@ export function BookPage() {
       <Link className="back-link" to="/library">
         ← Your library
       </Link>
-      <BookDetails book={entry.books} />
+      <BookDetails book={entry.books} saved />
       {book.isPending && (
         <LoadingIndicator>Loading book details…</LoadingIndicator>
       )}
@@ -62,12 +62,12 @@ export function BookPage() {
         </p>
       )}
       <div className="page-heading">
-        <h1 className="section-title">
+        <h2 className="section-title">
           Your quotes{' '}
           <span className="muted">
             ({entry.quotes[0]?.count ?? quotes.data?.length ?? 0})
           </span>
-        </h1>
+        </h2>
         <Link
           className="button"
           to="/quotes/new"

@@ -54,7 +54,8 @@ Use current compatible stable package versions at implementation time; commit th
 
 ## 4. Brand and design system
 
-**Name:** Dogeard; **wordmark:** `dogeard.`  
+**Name:** Dogeard; **wordmark:** `dog-eard.`
+
 **Tagline:** Keep the words that stay with you.
 
 Initial palette:
@@ -362,3 +363,14 @@ Current discovery UI scope: expose only Open Library and suppress the catalogue 
 Valid 120-character unbroken collection names must fit 320, 390, 768 and 1440 px widths without horizontal page scrolling. Clamp library titles to three lines but wrap full detail titles. Keep mobile primary navigation and quote actions at least 44×44 px, with Delete visually separated. Collapse optional collection appearance under “Customise collection”, use a compact mobile selected summary, and focus/scroll to the quotation field after selection. Edit/move dialog actions stay outside the scrolling form body; use a compact edit preview. Escape closes an open nested appearance chooser before dismissing its enclosing dialog and preserves the draft. Colour controls remain hidden; palette contrast changes are deferred. Validate real mobile keyboards and assistive technologies separately from viewport emulation.
 
 Book description previews on Add quote and book detail pages wrap without an internal scroll area and display at most 320 Unicode characters including `...` when truncated. Preserve the full stored description; only presentation is shortened. Descriptions of 320 characters or fewer remain unchanged.
+
+## Design review implementation — 25 October 2026
+
+- Set the HTML document title to exactly `Dog-eard — Keep the words that stay with you.`. Render the shared `dog-eard.` wordmark with the typographic hyphen entity `&#8208;`, zero letter spacing on the hyphen itself and `0.06em` optical margins. Keep surrounding letters tightly set. Use the same treatment in navigation, footer, setup and pre-JavaScript startup HTML. The application name and user content remain unchanged.
+- Saved book/collection names are the primary page heading; “Your quotes” is a secondary section heading. Use a shared compact cover/name/attribution layout, with Edit collection grouped into the identity area. Selected items in the editor remain secondary headings.
+- Saved-book descriptions live in a collapsed “About this book” disclosure. Expanded descriptions and selected-book descriptions span the metadata width, wrap in normal document flow and remain capped at 320 Unicode characters including `...`. Full stored metadata is unchanged.
+- New quote forms keep optional attribution, source, reference and notes under “Add attribution and details” (or “Add details” for ordinary book quotes). Existing saved details open automatically when editing. Closing the disclosure preserves registered values; validation reveals and focuses an invalid optional field. Saving only quotation text requires no metadata interaction.
+- Hide the redundant preselection editor placeholder on mobile; keep the unbounded saved-library picker list and compact selected-collection summary.
+- The private library hero previews at most 160 Unicode characters, retaining at most three source lines. Longer passages offer “Read full quote” and “Show less”, expanding in document flow without nested scrolling. Refresh resets expansion. Do not truncate stored quotes or change the public homepage's complete static quotation.
+- Onboarding introduces both books and non-book collections; “library” names the whole space and “collection” names a non-book entry. Preserve the owner's homepage quotations and the explicit homepage eyebrow “A home for words in your life”.
+- Shared surface, border, muted-text, spacing, radius and supporting-type tokens reduce drift. Useful supporting metadata uses 13 px, decorative labels use 12 px, form input text stays 16 px, and personalised thumbnail names remain visible/truncated where space allows. Preserve saved colours and hidden colour controls.

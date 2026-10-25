@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { execFileSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../src/types/database';
+import type { SavedQuote } from '../src/services/quotesService';
 const local = JSON.parse(
   execFileSync('npx', ['supabase', 'status', '-o', 'json'], {
     encoding: 'utf8',
@@ -94,9 +95,17 @@ test('shows startup feedback then a static homepage quote without a database req
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('', { waitUntil: 'commit' });
     await expect(page.locator('.app-startup')).toContainText(
-      'Opening Dogeard…',
+      'Opening dog-eard…',
     );
     await expect(page.locator('.startup-spinner')).toBeVisible();
+    await expect(page.locator('.app-startup .wordmark-logo')).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator('.app-startup .wordmark-logo')
+          .evaluate((image) => (image as HTMLImageElement).naturalWidth > 0),
+      )
+      .toBe(true);
     releaseScript();
     await expect(page.locator('.lead')).toBeVisible();
     await expect(page.locator('.literary-card blockquote')).toBeVisible();
@@ -104,6 +113,25 @@ test('shows startup feedback then a static homepage quote without a database req
       0,
     );
     expect(quoteRequests).toBe(0);
+    await expect(page.locator('.wordmark-logo')).toHaveCount(2);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const logo of await page.locator('.wordmark-logo').all()) {
+        await expect(logo).toBeVisible();
+        await expect
+          .poll(() =>
+            logo.evaluate(
+              (image) => (image as HTMLImageElement).naturalWidth > 0,
+            ),
+          )
+          .toBe(true);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
     await checkA11y(page);
   } finally {
     releaseScript();
@@ -269,6 +297,7 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
     ).toBeVisible();
     await expect(page.getByText('Loading your quotes…')).toBeVisible();
     releaseDetails();
+    await page.getByText('About this book', { exact: true }).click();
     await expect(page.getByText(metadata.description)).toBeVisible();
     await expect(page.getByText('Loading your quotes…')).toBeVisible();
     releaseQuotes();
@@ -365,7 +394,7 @@ test('header Sign in opens without another page-code download', async ({
       .getByRole('link', { name: 'Create an account', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'Begin your collection.' }),
+      page.getByRole('heading', { name: 'Begin your library.' }),
     ).toBeVisible();
     expect(extraScripts).toEqual([]);
   } finally {
@@ -566,6 +595,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await page
     .getByLabel('The words you want to keep')
     .fill('The words we carry become a part of us.');
+  await page.locator('.quote-details > summary').click();
   await page.getByLabel(/Page or location/).fill('xiv');
   await page.getByLabel(/A note to yourself/).fill('Come back to this.');
   await page.getByRole('button', { name: 'Keep this quote' }).click();
@@ -840,6 +870,7 @@ test('creates, reuses, renames and moves personal collections without book searc
   await page
     .getByLabel('The words you want to keep')
     .fill('A small observation worth keeping.');
+  await page.locator('.quote-details > summary').click();
   await page.getByLabel('Author or speaker').fill('A friend');
   await page.getByLabel('Source', { exact: false }).fill('A conversation');
   await page.getByLabel('Reference').fill('Yesterday');
@@ -1834,4 +1865,182 @@ test('already preloaded detail modules do not show a code spinner on their first
       () => (window as unknown as { codeSpinnerSeen: boolean }).codeSpinnerSeen,
     ),
   ).toBe(false);
+});
+
+test('design review layouts keep saved words prominent and long hero passages deliberate', async ({
+  page,
+}) => {
+  const email = await signup(page);
+  const owner = createClient(local.API_URL, local.ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  expect(
+    (
+      await owner.auth.signInWithPassword({
+        email,
+        password: 'Reading-words-123',
+      })
+    ).error,
+  ).toBeNull();
+  const books: SavedQuote[] = [];
+  for (const covered of [true, false]) {
+    const source = `OL${Date.now()}${covered ? 31 : 32}W`;
+    fixtureSources.push(source);
+    const result = await owner.rpc('save_quote_with_book_result', {
+      book: {
+        source: 'open_library',
+        source_id: source,
+        title: covered ? 'Words for Everyday Life' : 'A Book Without a Cover',
+        authors: ['A Review Writer'],
+        published_date: '2024',
+        description:
+          'A description that should support the words, rather than take over the page. '.repeat(
+            10,
+          ),
+        ...(covered
+          ? { cover_url: 'https://covers.openlibrary.org/b/id/1-M.jpg' }
+          : {}),
+      },
+      quote: { text: 'A line worth keeping.' },
+    });
+    expect(result.error).toBeNull();
+    books.push(result.data[0]);
+  }
+  const collection = await owner.rpc('save_styled_collection_quote', {
+    collection_name: 'Lines from Anywhere',
+    appearance: { icon: 'music' },
+    quote: { text: 'A thought of my own.' },
+  });
+  expect(collection.error).toBeNull();
+  await page.route('https://covers.openlibrary.org/**', (route) =>
+    route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="130" height="190"><rect width="130" height="190" fill="#203b35"/><text x="15" y="85" fill="#f5f0e6" font-size="18">Words</text></svg>',
+    }),
+  );
+  let heroText = 'A'.repeat(10000);
+  await page.route('**/rest/v1/rpc/get_random_library_entry_quote', (route) =>
+    route.fulfill({
+      json: [
+        {
+          quote_id: books[0].quote_record.id,
+          user_book_id: books[0].library_entry.id,
+          entry_kind: 'book',
+          entry_title: 'Words for Everyday Life',
+          text: heroText,
+          author: 'A Review Writer',
+          book_title: 'Words for Everyday Life',
+          published_year: '2024',
+        },
+      ],
+    }),
+  );
+  await page.reload();
+  const checkWidth = async () =>
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('#/library');
+    const hero = page.locator('.library-quote-hero');
+    await expect(
+      hero.getByRole('button', { name: 'Read full quote' }),
+    ).toBeVisible();
+    expect(
+      Array.from(await hero.locator('blockquote').innerText()).length,
+    ).toBeLessThanOrEqual(160);
+    expect((await hero.boundingBox())!.height).toBeLessThan(700);
+    await checkWidth();
+    await hero.getByRole('button', { name: 'Read full quote' }).click();
+    expect(await hero.locator('blockquote').textContent()).toBe(heroText);
+    await hero.getByRole('button', { name: 'Show less' }).click();
+    for (const book of books) {
+      await page.goto(`#/books/${book.library_entry.id}`);
+      await expect(
+        page.getByRole('heading', {
+          level: 1,
+          name: book.library_entry.books.title,
+        }),
+      ).toBeVisible();
+      const quotesHeading = page.getByRole('heading', {
+        level: 2,
+        name: 'Your quotes (1)',
+      });
+      await expect(quotesHeading).toBeVisible();
+      if (viewport.width === 390)
+        expect((await quotesHeading.boundingBox())!.y).toBeLessThan(650);
+      await expect(page.locator('.description')).not.toBeVisible();
+      await page.getByText('About this book', { exact: true }).click();
+      await expect(page.locator('.description')).toBeVisible();
+      expect(
+        Array.from(await page.locator('.description').innerText()).length,
+      ).toBeLessThanOrEqual(320);
+      const description = await page.locator('.description').evaluate((el) => ({
+        client: el.clientHeight,
+        scroll: el.scrollHeight,
+      }));
+      expect(description.scroll).toBeLessThanOrEqual(description.client + 1);
+      await checkWidth();
+    }
+    await page.goto(`#/collections/${collection.data[0].library_entry.id}`);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Lines from Anywhere' }),
+    ).toBeVisible();
+    await expect(
+      page
+        .locator('.entry-actions')
+        .getByRole('button', { name: 'Edit collection' }),
+    ).toBeVisible();
+    await page
+      .locator('.page-heading')
+      .getByRole('link', { name: 'Add quote', exact: true })
+      .click();
+    await expect(page.getByLabel('The words you want to keep')).toBeVisible();
+    await expect(page.getByLabel('Author or speaker')).not.toBeVisible();
+    await page
+      .getByText('Add attribution and details', { exact: false })
+      .click();
+    await page.getByLabel('Author or speaker').fill('Draft attribution');
+    await page
+      .getByText('Add attribution and details', { exact: false })
+      .click();
+    await page
+      .getByText('Add attribution and details', { exact: false })
+      .click();
+    await expect(page.getByLabel('Author or speaker')).toHaveValue(
+      'Draft attribution',
+    );
+    await page
+      .getByText('Add attribution and details', { exact: false })
+      .click();
+    await checkWidth();
+  }
+  for (const text of [
+    'A short line.',
+    'First line.\nSecond line.\nThird line.\nFourth line.',
+  ]) {
+    heroText = text;
+    await page.goto('#/library');
+    await page.reload();
+    const hero = page.locator('.library-quote-hero');
+    if (text.includes('\n'))
+      await expect(
+        hero.getByRole('button', { name: 'Read full quote' }),
+      ).toBeVisible();
+    else {
+      await expect(hero.locator('blockquote')).toHaveText(text);
+      await expect(
+        hero.getByRole('button', { name: 'Read full quote' }),
+      ).toHaveCount(0);
+    }
+  }
+  await checkA11y(page);
 });

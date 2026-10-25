@@ -250,7 +250,9 @@ export function AddQuotePage() {
             />
           )}
         </section>
-        <section className="paper-panel">
+        <section
+          className={`paper-panel ${book || collection ? '' : 'editor-placeholder'}`}
+        >
           {book || collection ? (
             <QuoteForm
               key={

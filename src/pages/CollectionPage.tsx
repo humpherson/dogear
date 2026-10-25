@@ -78,7 +78,98 @@ export function CollectionPage() {
       <Link className="back-link" to="/library">
         ← Your library
       </Link>
-      <CollectionDetails {...entry} />
+      <CollectionDetails
+        {...entry}
+        primary
+        actions={
+          <Dialog.Root
+            open={renaming}
+            onOpenChange={(open) => {
+              if (!rename.isPending) {
+                setRenaming(open);
+                if (open) {
+                  setName(entry.name);
+                  setAppearance({
+                    icon: entry.icon,
+                    background_colour: entry.background_colour,
+                    text_colour: entry.text_colour,
+                    icon_colour: entry.icon_colour,
+                    border_colour: entry.border_colour,
+                  });
+                  rename.reset();
+                }
+              }
+            }}
+          >
+            <Dialog.Trigger asChild>
+              <button className="secondary">Edit collection</button>
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Overlay className="dialog-overlay" />
+              <Dialog.Content
+                className="dialog managed-dialog"
+                onEscapeKeyDown={protectCollectionChooserEscape}
+              >
+                <Dialog.Title>Edit collection</Dialog.Title>
+                <Dialog.Description>
+                  Your collection name stays private. Renaming it won’t change
+                  quote credits.
+                </Dialog.Description>
+                <form
+                  autoComplete="off"
+                  className="dialog-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    rename.mutate();
+                  }}
+                >
+                  <div className="dialog-scroll">
+                    <label htmlFor="rename-collection">Collection name</label>
+                    <input
+                      autoComplete="off"
+                      id="rename-collection"
+                      name="rename-collection-title"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      maxLength={120}
+                      disabled={rename.isPending}
+                    />
+                    <details className="collection-customise">
+                      <summary>Customise collection</summary>
+                      <CollectionAppearanceFields
+                        value={appearance}
+                        onChange={setAppearance}
+                        disabled={rename.isPending}
+                      />
+                      <div className="collection-preview">
+                        <CollectionCover name={name} {...appearance} large />
+                      </div>
+                    </details>
+                    {rename.isError && (
+                      <p role="alert">{message(rename.error)}</p>
+                    )}
+                  </div>
+                  <div className="actions dialog-footer">
+                    <button type="submit" disabled={rename.isPending}>
+                      {rename.isPending && <Spinner />}
+                      {rename.isPending ? 'Saving…' : 'Save collection'}
+                    </button>
+                    <Dialog.Cancel asChild>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={rename.isPending}
+                      >
+                        Cancel
+                      </button>
+                    </Dialog.Cancel>
+                  </div>
+                </form>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        }
+      />
       {collection.isError && (
         <p role="alert">
           {message(collection.error)}{' '}
@@ -87,97 +178,14 @@ export function CollectionPage() {
           </button>
         </p>
       )}
-      <Dialog.Root
-        open={renaming}
-        onOpenChange={(open) => {
-          if (!rename.isPending) {
-            setRenaming(open);
-            if (open) {
-              setName(entry.name);
-              setAppearance({
-                icon: entry.icon,
-                background_colour: entry.background_colour,
-                text_colour: entry.text_colour,
-                icon_colour: entry.icon_colour,
-                border_colour: entry.border_colour,
-              });
-              rename.reset();
-            }
-          }
-        }}
-      >
-        <Dialog.Trigger asChild>
-          <button className="secondary">Edit collection</button>
-        </Dialog.Trigger>
-        <Dialog.Portal>
-          <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content
-            className="dialog managed-dialog"
-            onEscapeKeyDown={protectCollectionChooserEscape}
-          >
-            <Dialog.Title>Edit collection</Dialog.Title>
-            <Dialog.Description>
-              Your collection name stays private. Renaming it won’t change quote
-              credits.
-            </Dialog.Description>
-            <form
-              autoComplete="off"
-              className="dialog-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                rename.mutate();
-              }}
-            >
-              <div className="dialog-scroll">
-                <label htmlFor="rename-collection">Collection name</label>
-                <input
-                  autoComplete="off"
-                  id="rename-collection"
-                  name="rename-collection-title"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  maxLength={120}
-                  disabled={rename.isPending}
-                />
-                <details className="collection-customise">
-                  <summary>Customise collection</summary>
-                  <CollectionAppearanceFields
-                    value={appearance}
-                    onChange={setAppearance}
-                    disabled={rename.isPending}
-                  />
-                  <div className="collection-preview">
-                    <CollectionCover name={name} {...appearance} large />
-                  </div>
-                </details>
-                {rename.isError && <p role="alert">{message(rename.error)}</p>}
-              </div>
-              <div className="actions dialog-footer">
-                <button type="submit" disabled={rename.isPending}>
-                  {rename.isPending && <Spinner />}
-                  {rename.isPending ? 'Saving…' : 'Save collection'}
-                </button>
-                <Dialog.Cancel asChild>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={rename.isPending}
-                  >
-                    Cancel
-                  </button>
-                </Dialog.Cancel>
-              </div>
-            </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+
       <div className="page-heading">
-        <h1 className="section-title">
+        <h2 className="section-title">
           Your quotes{' '}
           <span className="muted">
             ({entry.quotes[0]?.count ?? quotes.data?.length ?? 0})
           </span>
-        </h1>
+        </h2>
         <Link
           className="button"
           to="/quotes/new"

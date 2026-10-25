@@ -96,13 +96,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
     return <Navigate to="/library" replace />;
   const title = {
     login: 'Welcome back.',
-    signup: 'Begin your collection.',
+    signup: 'Begin your library.',
     reset: 'Find your way back.',
     update: 'A fresh start.',
   }[mode];
   return (
     <section className="auth-card">
-      <p className="eyebrow">Your reading space</p>
+      <p className="eyebrow">Your space for words</p>
       <h1>{title}</h1>
       <p className="muted">
         {

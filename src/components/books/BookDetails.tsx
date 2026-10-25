@@ -36,21 +36,26 @@ export function Cover({
 export function BookDetails({
   book,
   showOpenLibraryLink = true,
+  saved = false,
 }: {
   book: BookSearchResult | BookSummary;
   showOpenLibraryLink?: boolean;
+  saved?: boolean;
 }) {
   const characters = Array.from(book.description || '');
   const description =
     characters.length > 320
       ? `${characters.slice(0, 317).join('').trimEnd()}...`
       : book.description;
+  const Heading = saved ? 'h1' : 'h2';
   return (
-    <section className="book-details">
+    <section
+      className={`book-details entry-details ${saved ? 'saved-entry' : 'selected-entry'}`}
+    >
       <Cover key={book.source_id} book={book} large priority />
-      <div>
-        <p className="eyebrow">Your next dogeard</p>
-        <h2>{book.title}</h2>
+      <div className="entry-identity">
+        <p className="eyebrow">{saved ? 'Book' : 'Selected book'}</p>
+        <Heading>{book.title}</Heading>
         <p>{book.authors.join(', ') || 'Unknown author'}</p>
         {book.published_date && (
           <p className="muted">
@@ -58,7 +63,17 @@ export function BookDetails({
             {book.published_date}
           </p>
         )}
-        {description && <p className="description">{description}</p>}
+      </div>
+      <div className="entry-metadata">
+        {description &&
+          (saved ? (
+            <details className="book-description">
+              <summary>About this book</summary>
+              <p className="description">{description}</p>
+            </details>
+          ) : (
+            <p className="description">{description}</p>
+          ))}
         {book.source === 'google_books' && (
           <p>
             <a

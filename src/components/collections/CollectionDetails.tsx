@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { findCollectionIcon } from './collectionIcons';
 import type { CollectionDraft } from '../../types';
 export const defaultAppearance = {
@@ -33,14 +34,22 @@ export function CollectionCover({
     </div>
   );
 }
-export function CollectionDetails(collection: CollectionDraft) {
+export function CollectionDetails({
+  primary = false,
+  actions,
+  ...collection
+}: CollectionDraft & { primary?: boolean; actions?: ReactNode }) {
+  const Heading = primary ? 'h1' : 'h2';
   return (
-    <section className="book-details">
+    <section
+      className={`book-details entry-details ${primary ? 'saved-entry' : 'selected-entry'}`}
+    >
       <CollectionCover {...collection} large />
-      <div>
+      <div className="entry-identity">
         <p className="eyebrow">Collection</p>
-        <h2>{collection.name}</h2>
+        <Heading>{collection.name}</Heading>
         <p className="muted">A place for words from anywhere.</p>
+        {actions && <div className="entry-actions">{actions}</div>}
       </div>
     </section>
   );

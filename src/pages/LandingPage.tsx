@@ -5,7 +5,7 @@ import { useAuth } from '../features/auth/AuthProvider';
 import { LandingQuote } from '../components/quotes/LandingQuote';
 export function LandingPage() {
   const { session, loading } = useAuth();
-  if (loading) return <LoadingIndicator>Opening Dogeard…</LoadingIndicator>;
+  if (loading) return <LoadingIndicator>Opening dog-eard…</LoadingIndicator>;
   if (session) return <Navigate to="/library" replace />;
   return (
     <>
@@ -31,18 +31,18 @@ export function LandingPage() {
       <section className="intro-grid" aria-label="How Dogeard works">
         <article>
           <Library />
-          <h2>Find your book</h2>
+          <h2>Find a home for your words</h2>
           <p>
-            Search the books you’re reading, from old favourites to new
-            discoveries.
+            Find a book, or create a collection for lyrics, conversations and
+            thoughts of your own.
           </p>
         </article>
         <article>
           <Bookmark />
-          <h2>Keep a little of it</h2>
+          <h2>Keep a good line</h2>
           <p>
-            Save a passage, mark the page, and leave a thought for your future
-            self.
+            Save a passage or a passing thought. Add a source, a reference or a
+            note whenever you like.
           </p>
         </article>
         <article>

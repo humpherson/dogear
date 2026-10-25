@@ -125,3 +125,46 @@ it('does not show the previous account’s quote while another account loads', a
   );
   expect(screen.getByRole('status')).toHaveTextContent('Finding a quote');
 });
+it.each([
+  ['maximum length', 'A'.repeat(10000)],
+  [
+    'many lines',
+    Array.from({ length: 30 }, (_, i) => `Line ${i + 1}`).join('\n'),
+  ],
+  ['Unicode', '📚'.repeat(200)],
+])(
+  'keeps a %s passage compact, reveals its full text, and resets after refresh',
+  async (_, text) => {
+    const next = { ...quote, quote_id: 'q2', text: 'A fresh thought.' };
+    vi.spyOn(service, 'getRandomLibraryQuote')
+      .mockResolvedValueOnce({ ...quote, text })
+      .mockResolvedValue(next);
+    render(view());
+    const expand = await screen.findByRole('button', {
+      name: 'Read full quote',
+    });
+    const passage = screen.getByRole('blockquote');
+    expect(Array.from(passage.textContent || '').length).toBeLessThanOrEqual(
+      160,
+    );
+    expect(passage.textContent).not.toContain('\uFFFD');
+    await userEvent.click(expand);
+    expect(passage.textContent).toBe(text);
+    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Show less' }));
+    expect(Array.from(passage.textContent || '').length).toBeLessThanOrEqual(
+      160,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Read full quote' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await screen.findByText(next.text);
+    expect(
+      screen.queryByRole('button', { name: 'Show less' }),
+    ).not.toBeInTheDocument();
+  },
+);

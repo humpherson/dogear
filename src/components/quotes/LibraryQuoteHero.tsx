@@ -1,6 +1,6 @@
 import { heroQueryOptions, heroKey } from '../../features/library/libraryQuery';
 import { LoadingIndicator, Spinner } from '../ui/LoadingIndicator';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -11,9 +11,18 @@ export function LibraryQuoteHero({ quoteCount }: { quoteCount: number }) {
   const { session } = useAuth();
   const client = useQueryClient();
   const id = useId();
+  const [expandedQuote, setExpandedQuote] = useState<string | null>(null);
   const queryKey = heroKey(session?.user.id);
   const query = useQuery(heroQueryOptions(session?.user.id));
+  const fullText = query.data?.text || '';
+  const characters = Array.from(fullText.split('\n').slice(0, 3).join('\n'));
+  const shortened = characters.length > 160 || fullText.split('\n').length > 3;
+  const excerpt = shortened
+    ? `${characters.slice(0, 157).join('').trimEnd()}...`
+    : fullText;
+  const expanded = !!query.data && expandedQuote === query.data.quote_id;
   function refresh() {
+    setExpandedQuote(null);
     void client
       .fetchQuery({
         queryKey,
@@ -38,7 +47,22 @@ export function LibraryQuoteHero({ quoteCount }: { quoteCount: number }) {
       </div>
       {query.data ? (
         <>
-          <blockquote aria-live="polite">{query.data.text}</blockquote>
+          <blockquote id={`${id}-passage`} aria-live="polite">
+            {expanded ? fullText : excerpt}
+          </blockquote>
+          {shortened && (
+            <button
+              className="text-button hero-read-more"
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={`${id}-passage`}
+              onClick={() =>
+                setExpandedQuote(expanded ? null : query.data!.quote_id)
+              }
+            >
+              {expanded ? 'Show less' : 'Read full quote'}
+            </button>
+          )}
           {query.data.author && (
             <p className="library-quote-author">{query.data.author}</p>
           )}
