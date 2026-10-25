@@ -2044,3 +2044,66 @@ test('design review layouts keep saved words prominent and long hero passages de
   }
   await checkA11y(page);
 });
+
+test('serves favicon, touch and manifest assets within the configured base path', async ({
+  page,
+  request,
+  baseURL,
+}) => {
+  await page.goto('');
+  const base = new URL(baseURL!);
+  await expect(
+    page.locator('meta[name="apple-mobile-web-app-title"]'),
+  ).toHaveAttribute('content', 'Dog-eard');
+  const links = await page
+    .locator(
+      'head link[rel="icon"], head link[rel="apple-touch-icon"], head link[rel="manifest"]',
+    )
+    .evaluateAll((elements) =>
+      elements.map((element) => ({
+        rel: element.getAttribute('rel'),
+        href: (element as HTMLLinkElement).href,
+        type: element.getAttribute('type'),
+      })),
+    );
+  expect(links.some((link) => link.type === 'image/svg+xml')).toBe(true);
+  expect(links.some((link) => link.type === 'image/png')).toBe(true);
+  expect(links.some((link) => link.type === 'image/x-icon')).toBe(true);
+  for (const link of links) {
+    expect(new URL(link.href).pathname.startsWith(base.pathname)).toBe(true);
+    const response = await request.get(link.href);
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).not.toContain('text/html');
+    if (link.type === 'image/x-icon') {
+      const body = await response.body();
+      expect(body.readUInt16LE(0)).toBe(0);
+      expect(body.readUInt16LE(2)).toBe(1);
+      expect(body.readUInt16LE(4)).toBe(3);
+    }
+  }
+  const manifestURL = links.find((link) => link.rel === 'manifest')!.href;
+  const manifest = await (await request.get(manifestURL)).json();
+  expect(manifest.name).toBe('Dog-eard');
+  expect(new URL(manifest.start_url, manifestURL).href).toBe(base.href);
+  expect(new URL(manifest.scope, manifestURL).href).toBe(base.href);
+  expect(
+    manifest.icons.some(
+      (icon: { purpose: string }) => icon.purpose === 'maskable',
+    ),
+  ).toBe(true);
+  for (const icon of manifest.icons) {
+    const url = new URL(icon.src, manifestURL);
+    expect(url.pathname.startsWith(base.pathname)).toBe(true);
+    const response = await request.get(url.href);
+    expect(response.status()).toBe(200);
+    const body = await response.body();
+    expect(body.subarray(1, 4).toString()).toBe('PNG');
+    expect(`${body.readUInt32BE(16)}x${body.readUInt32BE(20)}`).toBe(
+      icon.sizes,
+    );
+  }
+  const touch = links.find((link) => link.rel === 'apple-touch-icon')!;
+  const apple = await (await request.get(touch.href)).body();
+  expect(apple.readUInt32BE(16)).toBe(180);
+  expect(apple.readUInt32BE(20)).toBe(180);
+});

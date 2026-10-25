@@ -374,3 +374,9 @@ Book description previews on Add quote and book detail pages wrap without an int
 - The private library hero previews at most 160 Unicode characters, retaining at most three source lines. Longer passages offer “Read full quote” and “Show less”, expanding in document flow without nested scrolling. Refresh resets expansion. Do not truncate stored quotes or change the public homepage's complete static quotation.
 - Onboarding introduces both books and non-book collections; “library” names the whole space and “collection” names a non-book entry. Preserve the owner's homepage quotations and the explicit homepage eyebrow “A home for words in your life”.
 - Shared surface, border, muted-text, spacing, radius and supporting-type tokens reduce drift. Useful supporting metadata uses 13 px, decorative labels use 12 px, form input text stays 16 px, and personalised thumbnail names remain visible/truncated where space allows. Preserve saved colours and hidden colour controls.
+
+## Favicons and application metadata
+
+Provide `favicon.svg`, 16/32/96 px desktop PNG icons, a classic 16/32/48 px bitmap-frame `favicon.ico`, a 180 px Apple touch icon and `site.webmanifest`. Use circular forest (`#203b35`) backgrounds and white (`#FFFFFF`) logo paths, with transparent corners. Include a separately padded maskable icon whose artwork remains within the central safe circle. Declare Apple/mobile app names and touch metadata in the HTML head. Manifest name/short name are Dog-eard, with 192/512 px standard icons and a 512 px maskable variant. Preserve the current document title.
+
+Use `%BASE_URL%` for HTML asset links; manifest identity, launch URL, scope and icons resolve relative to the manifest location for root/project-path deployment. Keep committed assets reproducible via `npm run icons:generate` using the existing SVG source and Playwright Chromium. Browser/OS launcher masks can override the exported circular silhouette.

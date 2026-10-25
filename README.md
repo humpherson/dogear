@@ -216,6 +216,12 @@ See [the 25 October 2026 security review](spec/SECURITY-REVIEW.md) for local/liv
 
 Book descriptions wrap without internal scrolling on both Add quote and book detail screens, displaying at most 320 characters including a trailing `...` when truncated. Full descriptions remain stored. The Add quote screen hides the Open Library source link and the privacy hint; book detail source links and edit-form guidance remain available.
 
+## Favicons and home-screen icons
+
+The HTML head declares an SVG favicon, PNG desktop icons, a classic ICO, an Apple touch icon/title and `site.webmanifest`. The icons use a circular `#203b35` background with white logo paths and transparent corners. Device launchers may apply their own outer masks. The manifest includes 192/512 px icons and a separately padded 512 px maskable icon, plus the Dog-eard name and launch colours.
+
+All HTML icon URLs use the Vite base path. Manifest icon URLs, launch URL, scope and identity are relative to the manifest location, so the same files support root domains and project sites. Regenerate the committed assets from `public/dogeard-logo.svg` with `npm run icons:generate` after changing the logo. This uses the existing Playwright Chromium development dependency and needs its browser installed; it adds no image-conversion dependency.
+
 ## Design consistency
 
 The document title is **Dog-eard — Keep the words that stay with you.** The shared **dog-eard.** wordmark uses a typographic hyphen (`&#8208;`) with small optical margins, including in the startup HTML before JavaScript loads. The supplied SVG at `public/dogeard-logo.svg` appears beside the wordmark in the header, footer, setup and startup screens, with decorative image semantics and base-path-aware asset URLs. Its current shape, colour and stroke are preserved. A subtle SVG drop shadow adds depth, with canvas padding to avoid clipping. The paper/forest/gold/ink identity remains unchanged.
