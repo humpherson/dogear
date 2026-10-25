@@ -250,6 +250,8 @@ Use feature-local code where practical. Keep Supabase queries and external API t
 
 **Accessibility:** All forms have labels and errors, search results support keyboard navigation, dialogs manage focus, interactive controls have visible focus, and layouts work at mobile and desktop widths.
 
+**Action consistency:** All quote-adding links/buttons use “Add quote” with a leading decorative plus icon, including mobile navigation, empty/populated library states and book/collection details. Keep the icon visible at every breakpoint and preserve existing entry-selection context.
+
 ## 11. Environment configuration
 
 Commit `.env.example`, not `.env.local`:

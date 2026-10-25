@@ -11,7 +11,7 @@ export function LandingPage() {
     <>
       <section className="hero">
         <div>
-          <p className="eyebrow">A home for your reading life</p>
+          <p className="eyebrow">A home for words in your life</p>
           <h1>
             Keep the words
             <br />

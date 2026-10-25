@@ -44,3 +44,21 @@ All baseline first-use navigations mounted a code spinner; none of the patched, 
 Three explicitly labelled loading-test quotes were retained: two in `Loading checks — 2026-10-25 08:26 UTC`, and one associated with The Jungle Book. Creation, editing, moving, library navigation and mobile navigation were exercised. Existing quotes were not edited or deleted. The test browser session was revoked successfully with local-scope logout, preserving other sessions. Credentials and authentication storage were not written into the report or test scripts.
 
 120 unit tests and 30 desktop/mobile browser tests passed; four tests for hidden Google Books discovery remain skipped. Regression coverage verifies visible feedback for delayed downloads and no code fallback after completed preloads. Temporary local benchmark fixtures were removed after comparison.
+
+## Deployed retest — 25 October 2026
+
+Retested the deployed site after commit `a4bcaac` was published. The live HTML served `/assets/index-lITG1hI8.js`; book and collection modules were `/assets/BookPage-4LTTD8rj.js` and `/assets/CollectionPage-tCjWOWVm.js`. Nine fresh authenticated browser contexts covered three samples each of desktop, mobile and the same slower mobile profile. This retest made 65 interaction measurements and did not create or change any entries.
+
+The following are live click-to-frame medians (ranges), using the same expected-content checks as the initial live review. Detail timings measure the page heading becoming available, not completion of every quote or metadata request.
+
+| First navigation   | Desktop       | Mobile emulation | Slower mobile emulation |
+| ------------------ | ------------- | ---------------- | ----------------------- |
+| Book details       | 28 ms (24–29) | 25 ms (24–27)    | 65 ms (41–70)           |
+| Collection details | 28 ms (27–28) | 27 ms (25–28)    | 68 ms (32–73)           |
+| Add quote          | 52 ms (51–63) | 31 ms (30–35)    | 102 ms (82–281)         |
+
+All detail modules had finished downloading before their first click. None of the 18 first-use detail navigations displayed the unnecessary code fallback. This confirms the fix on the live deployment, compared with the previous roughly 320 ms live detail-page delay.
+
+Header Sign in opened in 47 ms; submitting credentials reached the library heading in 962 ms. Repeat Add quote medians were 29 ms desktop, 32 ms mobile and 45 ms slower mobile. Library return medians were 28, 30 and 47 ms respectively. The slower profile had occasional 280–281 ms library/Add quote interactions accompanied by long tasks (146 ms and 61 ms), so some CPU-related variability remains. These observations do not establish the cause of those long tasks.
+
+No console/page errors or HTTP responses of 400 or above were observed. Database activity feedback still appeared during detail reads. The test session was revoked with local-scope logout (HTTP 204), preserving other sessions. No application source, hosted schema or live entries were changed during this retest.

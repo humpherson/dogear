@@ -50,7 +50,7 @@ Install the browser once with `npx playwright install chromium` (`--with-deps` o
 
 - The sign-in, registration, and password-recovery screens are included in initial application code, so the header Sign in link opens without a separate page-code download.
 
-- Signed-in navigation offers Library, Add quote, and Sign out. Settings is hidden for now; existing settings URLs redirect to the library. Successful sign-out returns to the sign-in screen from any page.
+- Signed-in navigation offers Library, Add quote, and Sign out. Every quote-adding control uses “Add quote” with a leading plus icon, including mobile navigation, empty/populated libraries and book/collection details. Settings is hidden for now; existing settings URLs redirect to the library. Successful sign-out returns to the sign-in screen from any page.
 
 - The signed-out homepage immediately displays one of three owner-supplied static quotations, chosen randomly once per visit. It makes no quote database request. Notes, page references and account details remain private. Saved quotes and credits are owner-only after applying the endpoint retirement migration described below.
 

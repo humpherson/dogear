@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -72,7 +73,8 @@ export function BookPage() {
           to="/quotes/new"
           state={{ ownerId: entry.user_id, book: entry.books, userBookId }}
         >
-          Add another quote
+          <Plus size={18} aria-hidden="true" />
+          Add quote
         </Link>
       </div>
       <label htmlFor="quote-filter">Filter your quotes</label>

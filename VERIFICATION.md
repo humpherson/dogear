@@ -226,3 +226,19 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 - 120 unit tests and 30 browser checks passed; four hidden Google discovery checks remain skipped. Three labelled live test quotes were retained as authorised; existing quotes were unchanged. The test session was revoked with local-scope logout.
 - See `spec/LIVE-LOADING-REVIEW.md` for measurement conditions, limitations and detailed results.
 - Lint, typecheck, formatting, diff whitespace checks and root/project production builds passed. Frontend deployment remains pending.
+
+## 25 October 2026 — deployed loading retest
+
+- Verified the updated live deployment using nine fresh authenticated browser contexts: three desktop, three mobile and three with slower network/4× CPU throttling. Completed 65 interaction measurements without changing entries.
+- First-use live detail-page medians: book/collection 28/28 ms desktop, 25/27 ms mobile and 65/68 ms slower mobile. Previously these took roughly 320 ms. All detail code had downloaded before clicking; none of the 18 detail navigations showed an unnecessary code spinner.
+- First Add quote medians: 52 ms desktop, 31 ms mobile and 102 ms slower mobile. Occasional slower-profile library/Add quote interactions reached about 280 ms alongside browser long tasks; this remaining variability is documented without claiming its underlying cause.
+- No console/page errors or HTTP error responses were observed. The test session was revoked successfully with local-scope logout. Application source and hosted data/schema were unchanged. Full conditions and limitations are recorded in `spec/LIVE-LOADING-REVIEW.md`.
+
+## 25 October 2026 — design review and quote action consistency
+
+- Reviewed 68 local production-build screens across 320, 390, 768 and 1440 px with synthetic local data; review fixtures were removed. Recorded art direction, six prioritised findings, recommendations, evidence and coverage limits in `spec/DESIGN-REVIEW.md`. No live account data was used in the design review. Earlier palette exclusions remain intact.
+- At the user's request, standardised header/library/empty-library/book/collection quote-adding controls to “Add quote” with a leading plus icon. The mobile header keeps this icon visible; decorative icons do not change the accessible name. Existing destinations and selected-entry context are retained.
+- Updated browser selectors to distinguish the navigation and page actions sharing the same label. 120 unit tests and 30 desktop/mobile browser tests passed; four hidden Google discovery tests remain skipped. Lint and typecheck passed.
+- Other design recommendations remain unimplemented. The source changes require frontend deployment.
+- Verified matching action labels and visible leading plus icons on library, book and collection pages at 320, 390 and 1440 px using disposable local fixtures. All nine page/viewport checks passed; fixtures were removed. Formatting and diff whitespace checks passed.
+- Root and project-path production builds passed. Temporary review preview servers were stopped.

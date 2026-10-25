@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { protectCollectionChooserEscape } from '../components/collections/collectionDialog';
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-alert-dialog';
@@ -179,7 +180,8 @@ export function CollectionPage() {
           to="/quotes/new"
           state={{ ownerId: entry.user_id, collectionId: entry.id }}
         >
-          Add another quote
+          <Plus size={18} aria-hidden="true" />
+          Add quote
         </Link>
       </div>
       <label htmlFor="collection-filter">Filter your quotes</label>

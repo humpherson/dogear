@@ -1396,3 +1396,9 @@ nav .nav-sign-out,
     font-size: 1.4rem;
   }
 }
+
+/* Keep the primary creation action recognisable on mobile as well. */
+nav .add-quote svg {
+  display: block;
+  flex-shrink: 0;
+}

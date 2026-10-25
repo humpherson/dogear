@@ -39,8 +39,8 @@ export function LibraryPage() {
             <p className="muted">Words worth keeping, from books and beyond.</p>
           </div>
           <Link className="button" to="/quotes/new">
-            <Plus size={18} />
-            Add a quote
+            <Plus size={18} aria-hidden="true" />
+            Add quote
           </Link>
         </div>
 
@@ -60,7 +60,8 @@ export function LibraryPage() {
               Your library grows one passage at a time.
             </p>
             <Link className="button" to="/quotes/new">
-              Add a quote
+              <Plus size={18} aria-hidden="true" />
+              Add quote
             </Link>
           </section>
         ) : (
