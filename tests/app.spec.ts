@@ -118,6 +118,10 @@ test('shows startup feedback then a static homepage quote without a database req
       await page.setViewportSize({ width, height: 900 });
       for (const logo of await page.locator('.wordmark-logo').all()) {
         await expect(logo).toBeVisible();
+        await expect(logo).toHaveAttribute(
+          'src',
+          /\/dog-eared-logo-animated\.svg$/,
+        );
         await expect
           .poll(() =>
             logo.evaluate(

@@ -1,9 +1,9 @@
-export function Wordmark() {
+export function Wordmark({ animated = false }: { animated?: boolean }) {
   return (
     <>
       <img
         className="wordmark-logo"
-        src={`${import.meta.env.BASE_URL}dog-eared-logo.svg`}
+        src={`${import.meta.env.BASE_URL}${animated ? 'dog-eared-logo-animated.svg' : 'dog-eared-logo.svg'}`}
         width="48"
         height="28"
         alt=""

@@ -42,7 +42,7 @@ export function AppShell() {
       </a>
       <header className="site-header">
         <Link className="wordmark" to="/">
-          <Wordmark />
+          <Wordmark animated />
         </Link>
         <nav aria-label="Main navigation">
           {session ? (
@@ -113,7 +113,7 @@ export function AppShell() {
       </main>
       <footer>
         <span className="wordmark">
-          <Wordmark />
+          <Wordmark animated />
         </span>
         <span>A little space for words that matter.</span>
       </footer>
