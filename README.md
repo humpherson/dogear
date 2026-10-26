@@ -1,4 +1,4 @@
-# dogeard.
+# dog-eared.
 
 Keep the words that stay with you. A personal, responsive book quotation library built with React, TypeScript, Vite, and Supabase. The frontend deploys as static files to GitHub Pages; it needs no application server.
 
@@ -51,16 +51,16 @@ Install the browser once with `npx playwright install chromium` (`--with-deps` o
 
 - The sign-in, registration, and password-recovery screens are included in initial application code, so the header Sign in link opens without a separate page-code download.
 
-- Signed-in navigation offers Library, Add quote, and Sign out. Every quote-adding control uses “Add quote” with a leading plus icon, including mobile navigation, empty/populated libraries and book/collection details. Settings is hidden for now; existing settings URLs redirect to the library. Successful sign-out returns to the sign-in screen from any page.
+- Signed-in navigation offers Library, Add words, and Sign out. Every item-adding control uses “Add words” with a leading plus icon, including mobile navigation, empty/populated libraries and book/collection details. Settings is hidden for now; existing settings URLs redirect to the library. Successful sign-out returns to the sign-in screen from any page.
 
 - The signed-out homepage immediately displays one of three owner-supplied static quotations, chosen randomly once per visit. It makes no quote database request. Notes, page references and account details remain private. Saved quotes and credits are owner-only after applying the endpoint retirement migration described below.
 
-- Add quote is included in the initial application code so clicking it does not wait for an editor download. Library pages and the book picker share a 30-second, user-scoped cache to avoid redundant reads during navigation; confirmed quote mutations update it immediately.
+- Add words is included in the initial application code so clicking it does not wait for an editor download. Library pages and the book picker share a 30-second, user-scoped cache to avoid redundant reads during navigation; confirmed quote mutations update it immediately.
 
-- The top-bar Add quote page lets users choose an existing library book, filter saved books by title/author, or search Open Library for a new one. The choices sit in a single-open accordion: library selection opens by default when books are available; new-book search opens for an empty library. Choosing a saved book uses stored metadata and does not call Open Library.
-- Signed-in libraries show a full-width personal quote hero above the library heading, Add quote button, and book grid. Refresh selects another of that user’s quotes and avoids the current quote when another is available. A single-quote library shows its quote with Refresh disabled; an empty library keeps its existing call to action. This owner-only RPC is separate from the static homepage entries and uses RLS plus `auth.uid()`.
-- The library contains each book once. Selecting a search result writes nothing; saving the first quote atomically creates the library association.
-- Deleting the last quote removes the book from that user's library. Shared catalog metadata remains available and cannot be overwritten by later client submissions.
+- The top-bar Add words page lets users choose an existing library book, filter saved books by title/author, or search Open Library for a new one. The choices sit in a single-open accordion: library selection opens by default when books are available; new-book search opens for an empty library. Choosing a saved book uses stored metadata and does not call Open Library.
+- Signed-in libraries show a full-width personal quote hero above the library heading, Add words button, and book grid. Refresh selects another of that user’s quotes or definitions and avoids the current item when another is available. A single-quote library shows its quote with Refresh disabled; an empty library keeps its existing call to action. This owner-only RPC is separate from the static homepage entries and uses RLS plus `auth.uid()`.
+- The library contains each book once. Selecting a search result writes nothing; saving the first quote or definition atomically creates the library association.
+- Deleting the last saved item (quote or definition) removes the book from that user's library. Shared catalog metadata remains available and cannot be overwritten by later client submissions.
 - Book discovery supports Open Library work IDs and optionally Google Books volume IDs. Both providers can create catalogue entries and receive more quotes, with separate identities and caches. Manual entry, sharing, analytics, offline sync, and social features are deferred.
 - Quote text is limited to 10,000 characters; notes to 5,000; page/location references to 100. Client and database validation enforce these limits.
 - `src/services/` owns Supabase operations and external response normalization. TanStack Query owns server state; private query keys include the user ID and are cleared when accounts change.
@@ -76,7 +76,7 @@ The personal hero starts in parallel with the library read and retains its selec
 
 After sign-in, static Library, Book and Collection page modules preload during browser idle time (with a short timer fallback where idle callbacks are unavailable). Shared loaders retain the resolved component as well as the import promise, so a completed preload renders immediately without a first-use code spinner. This loads code only: it does not prefetch private records. Scheduled work is cancelled on sign-out/unmount and skipped when Save-Data is enabled. Existing hover/focus/touch data prefetching remains user-scoped.
 
-Page loading boundaries reset for each destination and account, so a first-use module download shows “Opening this page…” immediately while the header stays usable. The request indicator continues to cover data reads and writes after code loads. Navigating away clears the page spinner; a late module cannot redirect the user back. Failed page loads show a Refresh app option while keeping navigation available. No artificial minimum spinner delay or server warm-up is introduced; Auth and Add quote remain in the initial bundle.
+Page loading boundaries reset for each destination and account, so a first-use module download shows “Opening this page…” immediately while the header stays usable. The request indicator continues to cover data reads and writes after code loads. Navigating away clears the page spinner; a late module cannot redirect the user back. Failed page loads show a Refresh app option while keeping navigation available. No artificial minimum spinner delay or server warm-up is introduced; Auth and Add words remain in the initial bundle.
 
 Confirmed quote mutations update the affected caches immediately. Edits return canonical quote rows. Additive RPCs `save_quote_with_book_result` and `delete_quote_result` return canonical saved records or the remaining count while invoking the existing ownership-checked, transaction-locked functions. Reconciliation runs in the background and does not delay navigation or closing editors/dialogs. Complete confirmed quote lists and full book metadata are reused without an immediate redundant read.
 
@@ -164,7 +164,7 @@ See `VERIFICATION.md` for the commands actually run, outcomes, and outstanding h
 
 ## Collections
 
-Choose **Create a collection** on Add quote to keep words without a book. A collection is created atomically with its first quote; merely choosing a name does not save anything. Existing collections appear alongside books in the library and saved-entry picker. Names are private, trimmed, limited to 120 characters and unique per user without regard to case. Rename them from their detail page.
+Choose **Create a collection** on Add words to keep words without a book. A collection is created atomically with its first quote or definition; merely choosing a name does not save anything. Existing collections appear alongside books in the library and saved-entry picker. Names are private, trimmed, limited to 120 characters and unique per user without regard to case. Rename them from their detail page.
 
 Collection quotes have optional **Author or speaker** and **Source** credits. Leaving these blank does not infer the user's identity. The homepage uses static editorial entries. Saved quote text, credits, collection names, notes, references and account details remain owner-only after the endpoint retirement migration. The private hero uses `book_title` as the legacy field name for a custom source.
 
@@ -214,20 +214,38 @@ Edit collection and Move quote keep their actions outside the scrolling form bod
 
 See [the 25 October 2026 security review](spec/SECURITY-REVIEW.md) for local/live access checks, scope, a fixed account-switch/history disclosure, and remaining hardening recommendations. Private route state resets when the authenticated user changes. Incoming editor selections must belong to the current account; new collection navigation stores only owner/collection IDs and retrieves metadata through user-scoped RLS-protected queries. Shared bibliographic catalogue data remains readable to authenticated users, while personal library membership, quotations, notes and collection names are owner-only. Deploy the frontend to deliver the account-switch fix.
 
-Book descriptions wrap without internal scrolling on both Add quote and book detail screens, displaying at most 320 characters including a trailing `...` when truncated. Full descriptions remain stored. The Add quote screen hides the Open Library source link and the privacy hint; book detail source links and edit-form guidance remain available.
+Book descriptions wrap without internal scrolling on both Add words and book detail screens, displaying at most 320 characters including a trailing `...` when truncated. Full descriptions remain stored. The Add words screen hides the Open Library source link and the privacy hint; book detail source links and edit-form guidance remain available.
 
 ## Favicons and home-screen icons
 
-The HTML head declares an SVG favicon, PNG desktop icons, a classic ICO, an Apple touch icon/title and `site.webmanifest`. The icons use a circular `#203b35` background with white logo paths and transparent corners. Device launchers may apply their own outer masks. The manifest includes 192/512 px icons and a separately padded 512 px maskable icon, plus the Dog-eard name and launch colours.
+The HTML head declares an SVG favicon, PNG desktop icons, a classic ICO, an Apple touch icon/title and `site.webmanifest`. The icons use a circular `#203b35` background with white logo paths and transparent corners. Device launchers may apply their own outer masks. The manifest includes 192/512 px icons and a separately padded 512 px maskable icon, plus the Dog-eared name and launch colours.
 
-All HTML icon URLs use the Vite base path. Manifest icon URLs, launch URL, scope and identity are relative to the manifest location, so the same files support root domains and project sites. Regenerate the committed assets from `public/dogeard-logo.svg` with `npm run icons:generate` after changing the logo. This uses the existing Playwright Chromium development dependency and needs its browser installed; it adds no image-conversion dependency.
+All HTML icon URLs use the Vite base path. Manifest icon URLs, launch URL, scope and identity are relative to the manifest location, so the same files support root domains and project sites. Regenerate the committed assets from `public/dog-eared-logo.svg` with `npm run icons:generate` after changing the logo. This uses the existing Playwright Chromium development dependency and needs its browser installed; it adds no image-conversion dependency.
 
 ## Design consistency
 
-The document title is **Dog-eard — Keep the words that stay with you.** The shared **dog-eard.** wordmark uses a typographic hyphen (`&#8208;`) with small optical margins, including in the startup HTML before JavaScript loads. The supplied SVG at `public/dogeard-logo.svg` appears beside the wordmark in the header, footer, setup and startup screens, with decorative image semantics and base-path-aware asset URLs. Its current shape, colour and stroke are preserved. A subtle SVG drop shadow adds depth, with canvas padding to avoid clipping. The paper/forest/gold/ink identity remains unchanged.
+The document title is **Dog-eared — Keep the words that stay with you.** The shared **dog-eared.** wordmark uses a typographic hyphen (`&#8208;`) with small optical margins, including in the startup HTML before JavaScript loads. The supplied SVG at `public/dog-eared-logo.svg` appears beside the wordmark in the header, footer, setup and startup screens, with decorative image semantics and base-path-aware asset URLs. Its current shape, colour and stroke are preserved. A subtle SVG drop shadow adds depth, with canvas padding to avoid clipping. The paper/forest/gold/ink identity remains unchanged.
 
 Saved book and collection pages lead with the entry name. Book descriptions are under **About this book**, still capped at 320 characters and expanded without internal scrolling. New quotations can be saved directly; optional attribution, references and notes sit under **Add attribution and details** or **Add details**. Existing metadata opens automatically when editing, remains intact when collapsed, and is revealed/focused if validation fails. The duplicate preselection panel is hidden on mobile.
 
 Long personal hero quotations use a preview of up to 160 Unicode characters and three source lines, with **Read full quote / Show less** for the complete passage. Refresh resets expansion. Stored quotation text and the public homepage's full static quote are unchanged. Onboarding now introduces both books and collections. Supporting metadata uses a shared 13 px size, with common surface, border, spacing and radius tokens.
 
 See [the design review](spec/DESIGN-REVIEW.md) for the original findings, implementation follow-up and screenshots. Physical phone/keyboard and assistive-technology checks remain separate from Chromium viewport emulation.
+
+## Brand naming
+
+The app brand is **dog-eared** (the wordmark uses a typographic hyphen). Visible copy, app/Apple metadata, SVG titles, generated icons, package and workflow display names use the new spelling. The source logo is `public/dog-eared-logo.svg`.
+
+The configured live address remains `dogeard.co.uk`. Existing `/dogear/` repository paths, the local Supabase project ID, workflow concurrency group and password-recovery storage key retain their compatibility identifiers; these are not display names. Manifest identity and scope remain stable for existing installations.
+
+## Quotes and definitions
+
+Use **Add words** to choose a saved book/collection, find a new book or create a collection, then choose **Quote** (the default) or **Definition**. Definitions require a word or short phrase (up to 120 characters) and a meaning (up to 10,000 characters). Manual entry works in any language. Quote and definition drafts stay separate while switching type or parent; leaving the editor or switching account clears them.
+
+**Find meaning** performs an explicit English lookup using Free Dictionary API. Only the entered term is sent to the provider; no account, library, notes or existing meaning is sent. Lookup is optional, cancellable, cached in memory per account and term for ten minutes, and has a bounded retry for transient errors. Suggested meanings use best-effort UK spelling conversion for common US variants (for example colour, behaviour and organise), with a curated whole-word map. This is not a guaranteed EN-GB dataset; ambiguous words are left alone. Manual text, lookup terms, existing saved items and source/licence URLs are unchanged. Choose a meaning explicitly before replacing the editor text. Saved dictionary suggestions retain source and licence attribution even after editing; a book association records where a word was encountered, not authorship of its meaning. No API key or new repository variable is needed.
+
+Book and collection pages mix both item types newest first, with **All / Quotes / Definitions** and text filters. Definitions show a prominent term and plain meaning; quotes retain quotation styling. Library counts distinguish quotes and definitions. Both types support edit, move and delete, and can appear in the owner-only library hero. An item's type cannot change after saving. A parent disappears only when its last item of either type is deleted. Public homepage quotes remain static.
+
+The editor's canonical route is `/#/words/new`; `/#/quotes/new` remains a compatible alias. The physical `quotes` table and established RPC names remain for compatibility, with additive `item_type`, `term` and `lookup_attribution` fields. Older quote clients continue to work. Private data remains owner-only behind authentication, RLS and validated RPCs.
+
+**Before deploying this frontend**, apply `supabase/migrations/202610260001_definitions.sql` to the intended hosted Supabase project (after earlier pending migrations). Inspect `npx supabase migration list` and `npx supabase db push --dry-run`, then apply with `npx supabase db push`. This implementation applied the migration locally only; no hosted database was changed. Local updates use `npx supabase migration up --local` without a reset, followed by `npm run db:types`.

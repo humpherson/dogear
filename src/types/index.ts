@@ -14,7 +14,7 @@ export type Book = BookSearchResult & {
   created_at: string;
   updated_at: string;
 };
-export type Quote = {
+export type QuoteBase = {
   id: string;
   user_id: string;
   user_book_id: string | null;
@@ -29,12 +29,60 @@ export type Quote = {
   created_at: string;
   updated_at: string;
 };
+export type LookupAttribution = {
+  provider: 'free-dictionary-api';
+  source_urls: string[];
+  license_name?: string;
+  license_url?: string;
+};
+export type SavedItem = QuoteBase &
+  (
+    | { item_type?: 'quote'; term?: null; lookup_attribution?: null }
+    | {
+        item_type: 'definition';
+        term: string;
+        lookup_attribution?: LookupAttribution | null;
+      }
+  );
+export type Quote = SavedItem;
+export type ItemCounts = { quote: number; definition: number; total: number };
+export function itemCounts(entry: {
+  quotes: { count: number }[];
+  item_counts?: ItemCounts;
+}): ItemCounts {
+  return (
+    entry.item_counts || {
+      quote: entry.quotes[0]?.count || 0,
+      definition: 0,
+      total: entry.quotes[0]?.count || 0,
+    }
+  );
+}
+export function countLabel(entry: {
+  quotes: { count: number }[];
+  item_counts?: ItemCounts;
+}) {
+  const counts = itemCounts(entry);
+  return (
+    [
+      counts.quote
+        ? `${counts.quote} ${counts.quote === 1 ? 'quote' : 'quotes'}`
+        : '',
+      counts.definition
+        ? `${counts.definition} ${counts.definition === 1 ? 'definition' : 'definitions'}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' · ') || '0 words'
+  );
+}
 export type LibraryBook = {
   id: string;
   user_id: string;
   book_id: string;
   created_at: string;
   books: Book;
+  item_counts?: ItemCounts;
   quotes: { count: number }[];
 };
 export type BookSummary = Pick<
@@ -80,6 +128,7 @@ export type CollectionEntry = CollectionAppearance & {
   name: string;
   created_at: string;
   updated_at: string;
+  item_counts?: ItemCounts;
   quotes: { count: number }[];
 };
 export type LibraryEntry = LibrarySummary | CollectionEntry;

@@ -1,4 +1,4 @@
-import { isCollection, entryTitle, entryPath } from '../types';
+import { isCollection, entryTitle, entryPath, countLabel } from '../types';
 import { CollectionCover } from '../components/collections/CollectionDetails';
 import { prefetchBook } from '../features/library/prefetchBook';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
@@ -38,9 +38,9 @@ export function LibraryPage() {
             </h1>
             <p className="muted">Words worth keeping, from books and beyond.</p>
           </div>
-          <Link className="button" to="/quotes/new">
+          <Link className="button" to="/words/new">
             <Plus size={18} aria-hidden="true" />
-            Add quote
+            Add words
           </Link>
         </div>
 
@@ -54,14 +54,14 @@ export function LibraryPage() {
         ) : !query.data?.length ? (
           <section className="empty">
             <BookOpen size={42} />
-            <h2>Your first dogeard is waiting.</h2>
+            <h2>Your first dog-eared is waiting.</h2>
             <p>
-              Save a quote from a book, a conversation or your own thoughts.
-              Your library grows one passage at a time.
+              Keep a quote or definition from a book, a conversation or your own
+              thoughts. Your library grows one passage at a time.
             </p>
-            <Link className="button" to="/quotes/new">
+            <Link className="button" to="/words/new">
               <Plus size={18} aria-hidden="true" />
-              Add quote
+              Add words
             </Link>
           </section>
         ) : (
@@ -109,11 +109,7 @@ export function LibraryPage() {
                     ? 'Collection'
                     : entry.books.authors.join(', ') || 'Unknown author'}
                 </p>
-                <span className="quote-count">
-                  {entry.quotes[0]?.count || 0}{' '}
-                  {(entry.quotes[0]?.count || 0) === 1 ? 'quote' : 'quotes'}{' '}
-                  kept
-                </span>
+                <span className="quote-count">{countLabel(entry)} kept</span>
               </Link>
             ))}
           </div>

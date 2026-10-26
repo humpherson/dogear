@@ -74,7 +74,7 @@ it('explains a single-quote library and disables unnecessary refreshes', async (
   await screen.findByText(quote.text);
   expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
   expect(
-    screen.getByText('Save another quote to refresh this selection.'),
+    screen.getByText('Save more words to refresh this selection.'),
   ).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(get).toHaveBeenCalledOnce();
@@ -84,7 +84,7 @@ it('shows loading feedback and prevents concurrent refreshes', () => {
     () => new Promise(() => {}),
   );
   render(view());
-  expect(screen.getByRole('status')).toHaveTextContent('Finding a quote');
+  expect(screen.getByRole('status')).toHaveTextContent('Finding words');
   expect(screen.getByRole('button', { name: 'Refreshing…' })).toBeDisabled();
 });
 it('allows retrying an initial load error, including a single-quote library', async () => {
@@ -93,7 +93,7 @@ it('allows retrying an initial load error, including a single-quote library', as
     .mockResolvedValue(quote);
   render(view(1));
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'We couldn’t load your quote',
+    'We couldn’t load your words',
   );
   await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(await screen.findByText(quote.text)).toBeInTheDocument();
@@ -106,7 +106,7 @@ it('retains the displayed quote if refresh fails', async () => {
   await screen.findByText(quote.text);
   await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'We couldn’t refresh your quote',
+    'We couldn’t refresh your words',
   );
   expect(screen.getByText(quote.text)).toBeInTheDocument();
 });
@@ -123,7 +123,7 @@ it('does not show the previous account’s quote while another account loads', a
   await waitFor(() =>
     expect(screen.queryByText(quote.text)).not.toBeInTheDocument(),
   );
-  expect(screen.getByRole('status')).toHaveTextContent('Finding a quote');
+  expect(screen.getByRole('status')).toHaveTextContent('Finding words');
 });
 it.each([
   ['maximum length', 'A'.repeat(10000)],

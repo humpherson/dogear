@@ -1,9 +1,19 @@
+import { normaliseTerm } from '../../services/dictionaryService';
 import { Spinner } from '../ui/LoadingIndicator';
 import { useEffect, useId, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, type Resolver } from 'react-hook-form';
+import { DictionaryLookup } from './DictionaryLookup';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { quoteSchema, type QuoteInput } from '../../lib/validation';
+import {
+  quoteSchema,
+  definitionSchema,
+  type SavedItemInput,
+  type EditorFields,
+} from '../../lib/validation';
 export function QuoteForm({
+  itemType = 'quote',
+  onDraftChange,
+  creating = false,
   collection = false,
   focusOnMount = false,
   showPrivacyHint = true,
@@ -16,18 +26,22 @@ export function QuoteForm({
   disabled = false,
   pendingLabel = 'Saving…',
 }: {
+  itemType?: 'quote' | 'definition';
+  onDraftChange?: (draft: EditorFields) => void;
+  creating?: boolean;
   collection?: boolean;
   focusOnMount?: boolean;
   showPrivacyHint?: boolean;
   showCredits?: boolean;
-  initial?: QuoteInput;
-  onSubmit: (data: QuoteInput) => void;
+  initial?: EditorFields;
+  onSubmit: (data: SavedItemInput) => void;
   pending: boolean;
   pendingLabel?: string;
   disabled?: boolean;
   error?: string;
   onCancel?: () => void;
 }) {
+  const definition = itemType === 'definition';
   const id = useId();
   const form = useRef<HTMLFormElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(() =>
@@ -41,12 +55,24 @@ export function QuoteForm({
   );
   const {
     register,
+    control,
+    getValues,
+    setValue,
     setFocus,
     handleSubmit,
     formState: { errors },
-  } = useForm<QuoteInput>({
-    resolver: zodResolver(quoteSchema),
+  } = useForm<EditorFields>({
+    resolver: zodResolver(
+      definition ? definitionSchema : quoteSchema,
+    ) as Resolver<EditorFields>,
     defaultValues: {
+      ...(definition
+        ? {
+            item_type: 'definition' as const,
+            term: '',
+            lookup_attribution: null,
+          }
+        : {}),
       text: '',
       page_number: '',
       note: '',
@@ -54,13 +80,15 @@ export function QuoteForm({
       ...initial,
     },
   });
+  const term = useWatch({ control, name: 'term' }) || '';
+  const meaning = useWatch({ control, name: 'text' }) || '';
   useEffect(() => {
     if (!focusOnMount) return;
-    setFocus('text');
+    setFocus(definition ? 'term' : 'text');
     form.current
-      ?.querySelector('textarea')
+      ?.querySelector(definition ? 'input' : 'textarea')
       ?.scrollIntoView?.({ block: 'center' });
-  }, [focusOnMount, setFocus]);
+  }, [definition, focusOnMount, setFocus]);
   useEffect(() => {
     // Validation may reveal a previously collapsed field. Focus after it opens.
     const field = (
@@ -72,17 +100,61 @@ export function QuoteForm({
     <form
       autoComplete="off"
       name="quote-editor"
+      onChange={() => onDraftChange?.(getValues())}
       ref={form}
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((values) =>
+        onSubmit((definition ? definitionSchema : quoteSchema).parse(values)),
+      )}
       className="quote-form"
       aria-busy={pending}
     >
-      <label htmlFor={`${id}-quote-text`}>The words you want to keep</label>
+      {definition && (
+        <>
+          <label htmlFor={`${id}-term`}>Word or phrase</label>
+          <input
+            id={`${id}-term`}
+            autoComplete="off"
+            {...register('term')}
+            maxLength={120}
+            aria-invalid={!!errors.term}
+            aria-describedby={`${id}-term-error`}
+          />
+          <p className="field-error" id={`${id}-term-error`}>
+            {errors.term?.message}
+          </p>
+          <DictionaryLookup
+            key={normaliseTerm(term)}
+            term={term}
+            hasMeaning={!!meaning.trim()}
+            onChoose={(result) => {
+              setValue('text', result.definition, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+              setValue('lookup_attribution', result.attribution, {
+                shouldDirty: true,
+              });
+              onDraftChange?.(getValues());
+              setFocus('text');
+              form.current
+                ?.querySelector('textarea')
+                ?.scrollIntoView?.({ block: 'center' });
+            }}
+          />
+        </>
+      )}
+      <label htmlFor={`${id}-quote-text`}>
+        {definition ? 'Meaning' : 'The words you want to keep'}
+      </label>
       <textarea
         autoComplete="off"
         id={`${id}-quote-text`}
         rows={7}
-        placeholder="A sentence, a passage, a little perspective…"
+        placeholder={
+          definition
+            ? 'Explain what this word or phrase means…'
+            : 'A sentence, a passage, a little perspective…'
+        }
         {...register('text')}
         aria-invalid={!!errors.text}
         aria-describedby={
@@ -108,25 +180,31 @@ export function QuoteForm({
         onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
       >
         <summary>
-          {showCredits ? 'Add attribution and details' : 'Add details'}{' '}
+          {showCredits || definition
+            ? 'Add attribution and details'
+            : 'Add details'}{' '}
           <span className="muted">(optional)</span>
         </summary>
-        {showCredits && (
+        {(showCredits || definition) && (
           <>
-            <label htmlFor={`${id}-author`}>
-              Author or speaker <span className="muted">(optional)</span>
-            </label>
-            <input
-              autoComplete="off"
-              id={`${id}-author`}
-              {...register('credit_author')}
-              maxLength={10000}
-              aria-invalid={!!errors.credit_author}
-              aria-describedby={`${id}-author-error`}
-            />
-            <p className="field-error" id={`${id}-author-error`}>
-              {errors.credit_author?.message}
-            </p>
+            {!definition && (
+              <>
+                <label htmlFor={`${id}-author`}>
+                  Author or speaker <span className="muted">(optional)</span>
+                </label>
+                <input
+                  autoComplete="off"
+                  id={`${id}-author`}
+                  {...register('credit_author')}
+                  maxLength={10000}
+                  aria-invalid={!!errors.credit_author}
+                  aria-describedby={`${id}-author-error`}
+                />
+                <p className="field-error" id={`${id}-author-error`}>
+                  {errors.credit_author?.message}
+                </p>
+              </>
+            )}
             <label htmlFor={`${id}-source`}>
               Source <span className="muted">(optional)</span>
             </label>
@@ -135,7 +213,11 @@ export function QuoteForm({
               id={`${id}-source`}
               {...register('credit_source')}
               maxLength={1000}
-              placeholder="e.g. a song title or conversation"
+              placeholder={
+                definition
+                  ? 'e.g. a dictionary or article'
+                  : 'e.g. a song title or conversation'
+              }
               aria-invalid={!!errors.credit_source}
               aria-describedby={`${id}-source-error`}
             />
@@ -193,9 +275,11 @@ export function QuoteForm({
           {pending && <Spinner />}
           {pending
             ? pendingLabel
-            : initial
+            : initial && !creating
               ? 'Save changes'
-              : 'Keep this quote'}
+              : definition
+                ? 'Keep this definition'
+                : 'Keep this quote'}
         </button>
         {onCancel && (
           <button

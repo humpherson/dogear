@@ -151,8 +151,11 @@ export type Database = {
           credit_source: string | null;
           credit_year: string | null;
           id: string;
+          item_type: string;
+          lookup_attribution: Json | null;
           note: string | null;
           page_number: string | null;
+          term: string | null;
           text: string;
           updated_at: string;
           user_book_id: string | null;
@@ -167,8 +170,11 @@ export type Database = {
           credit_source?: string | null;
           credit_year?: string | null;
           id?: string;
+          item_type?: string;
+          lookup_attribution?: Json | null;
           note?: string | null;
           page_number?: string | null;
+          term?: string | null;
           text: string;
           updated_at?: string;
           user_book_id?: string | null;
@@ -182,8 +188,11 @@ export type Database = {
           credit_source?: string | null;
           credit_year?: string | null;
           id?: string;
+          item_type?: string;
+          lookup_attribution?: Json | null;
           note?: string | null;
           page_number?: string | null;
+          term?: string | null;
           text?: string;
           updated_at?: string;
           user_book_id?: string | null;
@@ -242,6 +251,7 @@ export type Database = {
     };
     Functions: {
       collection_quote_payload: { Args: { input: Json }; Returns: Json };
+      delete_library_item: { Args: { item_id: string }; Returns: Json };
       delete_library_quote: {
         Args: { quote_id: string };
         Returns: {
@@ -274,6 +284,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Json[];
       };
+      get_library_entry: {
+        Args: { entry_id: string; entry_kind: string };
+        Returns: Json;
+      };
       get_random_library_entry_quote: {
         Args: { exclude_quote_id?: string };
         Returns: {
@@ -286,6 +300,10 @@ export type Database = {
           text: string;
           user_book_id: string;
         }[];
+      };
+      get_random_library_item: {
+        Args: { exclude_item_id?: string };
+        Returns: Json;
       };
       get_random_library_quote: {
         Args: { exclude_quote_id?: string };
@@ -359,6 +377,10 @@ export type Database = {
           library_entry: Json;
           quote_record: Json;
         }[];
+      };
+      saved_item_payload: {
+        Args: { input: Json; original?: Json };
+        Returns: Json;
       };
     };
     Enums: {

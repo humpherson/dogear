@@ -248,13 +248,13 @@ it('clears the page spinner when navigating away before a module finishes', asyn
       <Route element={<AppShell />}>
         <Route index element={<Link to="/books/example">Open book</Link>} />
         <Route path="/books/example" element={<Page />} />
-        <Route path="/quotes/new" element={<h1>Quote editor</h1>} />
+        <Route path="/words/new" element={<h1>Quote editor</h1>} />
       </Route>
     </Routes>,
   );
   await userEvent.click(screen.getByRole('link', { name: 'Open book' }));
   await screen.findByRole('status');
-  await userEvent.click(screen.getByRole('link', { name: 'Add quote' }));
+  await userEvent.click(screen.getByRole('link', { name: 'Add words' }));
   expect(
     await screen.findByRole('heading', { name: 'Quote editor' }),
   ).toBeVisible();

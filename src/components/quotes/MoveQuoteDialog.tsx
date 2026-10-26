@@ -27,6 +27,8 @@ export function MoveQuoteDialog({
   quote: Quote;
   book?: BookSummary | BookSearchResult;
 }) {
+  const definition = quote.item_type === 'definition';
+  const label = definition ? 'definition' : 'quote';
   const { session } = useAuth(),
     client = useQueryClient(),
     navigate = useNavigate();
@@ -97,11 +99,11 @@ export function MoveQuoteDialog({
         if (value) {
           const credits = {
             author:
-              quote.credit_mode === 'custom'
+              definition || quote.credit_mode === 'custom'
                 ? quote.credit_author || ''
                 : book?.authors.join(', ') || 'Unknown author',
             source:
-              quote.credit_mode === 'custom'
+              definition || quote.credit_mode === 'custom'
                 ? quote.credit_source || ''
                 : book?.title || '',
           };
@@ -126,10 +128,10 @@ export function MoveQuoteDialog({
           className="dialog managed-dialog"
           onEscapeKeyDown={protectCollectionChooserEscape}
         >
-          <Dialog.Title>Move this quote</Dialog.Title>
+          <Dialog.Title>Move this {label}</Dialog.Title>
           <Dialog.Description>
-            Choose a new home and review its credits. Moving the final quote
-            also removes its previous book or collection from your library.
+            Choose a new home and review its credits. Moving the final item also
+            removes its previous book or collection from your library.
           </Dialog.Description>
           <form
             autoComplete="off"
@@ -205,18 +207,22 @@ export function MoveQuoteDialog({
                   </details>
                 </>
               )}
-              <label htmlFor={`move-author-${quote.id}`}>
-                Author or speaker (optional)
-              </label>
-              <input
-                autoComplete="off"
-                id={`move-author-${quote.id}`}
-                name="quote-credit-author"
-                value={author}
-                maxLength={10000}
-                onChange={(event) => setAuthor(event.target.value)}
-                disabled={mutation.isPending}
-              />
+              {!definition && (
+                <>
+                  <label htmlFor={`move-author-${quote.id}`}>
+                    Author or speaker (optional)
+                  </label>
+                  <input
+                    autoComplete="off"
+                    id={`move-author-${quote.id}`}
+                    name="quote-credit-author"
+                    value={author}
+                    maxLength={10000}
+                    onChange={(event) => setAuthor(event.target.value)}
+                    disabled={mutation.isPending}
+                  />
+                </>
+              )}
               <label htmlFor={`move-source-${quote.id}`}>
                 Source (optional)
               </label>
@@ -230,8 +236,8 @@ export function MoveQuoteDialog({
                 disabled={mutation.isPending}
               />
               <p className="hint">
-                Review the author and source credits for this quote. Collection
-                names, notes and references stay private.
+                Review the source details for these words. Collection names,
+                notes and references stay private.
               </p>
               {(error || mutation.isError) && (
                 <p role="alert">{error || message(mutation.error)}</p>
@@ -240,7 +246,7 @@ export function MoveQuoteDialog({
             <div className="actions dialog-footer">
               <button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending && <Spinner />}
-                {mutation.isPending ? 'Moving…' : 'Move quote'}
+                {mutation.isPending ? 'Moving…' : `Move ${label}`}
               </button>
               <Dialog.Cancel asChild>
                 <button

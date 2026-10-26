@@ -1,8 +1,9 @@
-# Dogeard — Technical Specification
+# Dog-eared — Technical Specification
 
 **Status:** Implementation-ready specification  
 **Phase:** 1 — Application foundation and functional vertical slice  
-**App name:** Dogeard  
+**App name:** Dog-eared
+
 **Tagline:** Keep the words that stay with you.
 
 ## 1. Objective
@@ -54,7 +55,7 @@ Use current compatible stable package versions at implementation time; commit th
 
 ## 4. Brand and design system
 
-**Name:** Dogeard; **wordmark:** `dog-eard.`
+**Name:** Dog-eared; **wordmark:** `dog-eared.`
 
 **Tagline:** Keep the words that stay with you.
 
@@ -71,21 +72,22 @@ Design direction: warm, literary, calm, modern. Responsive mobile-first layout. 
 
 Use `HashRouter` so direct navigation and refresh work on GitHub Pages project sites.
 
-| Route                  | Access           | Purpose                                           |
-| ---------------------- | ---------------- | ------------------------------------------------- |
-| `/#/`                  | Public           | Landing page; redirect signed-in users to library |
-| `/#/login`             | Public           | Login                                             |
-| `/#/signup`            | Public           | Registration                                      |
-| `/#/reset-password`    | Public           | Request password reset                            |
-| `/#/update-password`   | Recovery session | Set new password                                  |
-| `/#/auth/callback`     | Public           | Process authentication redirects/errors           |
-| `/#/library`           | Authenticated    | Personal books with quote counts                  |
-| `/#/books/:userBookId` | Authenticated    | Book metadata and quotes                          |
-| `/#/quotes/new`        | Authenticated    | Choose a library book or search; create a quote   |
-| `/#/settings`          | Authenticated    | Redirect to library; Settings temporarily hidden  |
-| `*`                    | Public           | Not-found page                                    |
+| Route                  | Access           | Purpose                                                |
+| ---------------------- | ---------------- | ------------------------------------------------------ |
+| `/#/`                  | Public           | Landing page; redirect signed-in users to library      |
+| `/#/login`             | Public           | Login                                                  |
+| `/#/signup`            | Public           | Registration                                           |
+| `/#/reset-password`    | Public           | Request password reset                                 |
+| `/#/update-password`   | Recovery session | Set new password                                       |
+| `/#/auth/callback`     | Public           | Process authentication redirects/errors                |
+| `/#/library`           | Authenticated    | Personal books with quote counts                       |
+| `/#/books/:userBookId` | Authenticated    | Book metadata and quotes                               |
+| `/#/words/new`         | Authenticated    | Choose a book/collection; create a quote or definition |
+| `/#/quotes/new`        | Authenticated    | Compatible alias for Add words                         |
+| `/#/settings`          | Authenticated    | Redirect to library; Settings temporarily hidden       |
+| `*`                    | Public           | Not-found page                                         |
 
-Implement a shared `AppShell` with header, logo, navigation, main landmark, and responsive mobile layout. Signed-in navigation offers Library, Add quote, and a direct Sign out button with pending/error feedback. Hide Settings for now and redirect its existing URL to the library. Protected routes must wait for initial auth resolution before redirecting. Preserve intended navigation where reasonable.
+Implement a shared `AppShell` with header, logo, navigation, main landmark, and responsive mobile layout. Signed-in navigation offers Library, Add words, and a direct Sign out button with pending/error feedback. Hide Settings for now and redirect its existing URL to the library. Protected routes must wait for initial auth resolution before redirecting. Preserve intended navigation where reasonable.
 
 ## 6. Data model
 
@@ -239,19 +241,19 @@ Use feature-local code where practical. Keep Supabase queries and external API t
 
 **Book discovery:** Entering a title yields autocomplete results. Replace the input search icon with a visible spinner during debounce, queued, and active searches. Keep the search status visible after the field loses focus, identify the input as busy, and stop the indicator on completion or error. With reduced motion enabled, retain static busy feedback and readable status text. Selecting a result displays normalized metadata and a cover if available. Missing data does not crash the page.
 
-**Save quote:** Include the Add quote editor in initial application code so navigating to it does not require another page-code download. Share a 30-second, user-scoped library cache between the library page and book picker; update the affected cache from confirmed mutation responses, with targeted background reconciliation. The Add quote page offers existing library books with a local title/author filter and external discovery in a single-open accordion. Open library selection by default when saved books are available, otherwise open new-book search. Respect explicit section choices while library data loads. Selecting a saved book reuses stored metadata without Open Library requests, including legacy Google Books entries. Empty/error/loading library states keep external search available. Selecting a book and entering a valid quote creates a catalog record if necessary, creates a single user-library association, and saves the quote in one transaction. Repeated quotes against the same book reuse the same user-library association.
+**Save quote:** Include the Add words editor in initial application code so navigating to it does not require another page-code download. Share a 30-second, user-scoped library cache between the library page and book picker; update the affected cache from confirmed mutation responses, with targeted background reconciliation. The Add words page offers existing library books with a local title/author filter and external discovery in a single-open accordion. Open library selection by default when saved books are available, otherwise open new-book search. Respect explicit section choices while library data loads. Selecting a saved book reuses stored metadata without Open Library requests, including legacy Google Books entries. Empty/error/loading library states keep external search available. Selecting a book and entering a valid quote creates a catalog record if necessary, creates a single user-library association, and saves the quote in one transaction. Repeated quotes against the same book reuse the same user-library association.
 
-**Library:** Above the library heading and Add quote button, show a full-width hero containing a random quote from the signed-in user’s own library, with author/book attribution and a Refresh button. Refresh must avoid the currently displayed quote when another is available. Disable refresh and explain when the user has only one quote; retain the existing empty-library call to action when none exist. Fetch through an authenticated invoker-rights RPC constrained by `auth.uid()` and RLS; keep query cache keys scoped to the user. The user sees each quoted book once, with cover, title, author, and correct quote count. Selecting a book shows only that user's quotes. Empty libraries show a clear call to action.
+**Library:** Above the library heading and Add words button, show a full-width hero containing a random quote from the signed-in user’s own library, with author/book attribution and a Refresh button. Refresh must avoid the currently displayed quote when another is available. Disable refresh and explain when the user has only one quote; retain the existing empty-library call to action when none exist. Fetch through an authenticated invoker-rights RPC constrained by `auth.uid()` and RLS; keep query cache keys scoped to the user. The user sees each quoted book once, with cover, title, author, and correct quote count. Selecting a book shows only that user's quotes. Empty libraries show a clear call to action.
 
 **Editing/deleting:** A user can edit their own quote and delete it after confirmation. Removing the last quote removes the corresponding book from their library. Other users cannot access or mutate these records, including by guessing IDs or direct Supabase requests.
 
-**Navigation performance:** Return compact library summaries without descriptions/ISBNs. Load full metadata when opening/selecting a saved book, including legacy records, without external API calls. Render cached summaries immediately and let full details/quotes load independently; reuse full detail data for 60 seconds and quotes for 30 seconds. Start personal hero and library reads together and retain fresh hero selections across navigation. Preload book code/details/quotes on pointer, keyboard or touch intent with user-scoped keys and deduplication. Lazy-load grid/picker covers with async decoding and explicit dimensions; eagerly load the main detail cover. After a successful server write, update only affected caches from canonical save/edit results and authoritative deletion counts, preserve last-quote cleanup, and reconcile incomplete lists in the background. Keep RLS, mutation locks, and account cache isolation intact. After sign-in, preload static library/book/collection modules during idle time without fetching private records; cancel scheduled work on sign-out/unmount and skip it for Save-Data. Reset the route loading/error boundary by destination and user so delayed page code shows a visible accessible spinner immediately while the header stays available. Navigating away must clear the spinner even if the previous module is still downloading. Handle module failures with a refresh option and working navigation. Keep authentication and Add quote eager, query activity independent, and existing user-scoped intent prefetching intact. Retain resolved static page components alongside shared import promises so completed preloads render without a first-use code fallback.
+**Navigation performance:** Return compact library summaries without descriptions/ISBNs. Load full metadata when opening/selecting a saved book, including legacy records, without external API calls. Render cached summaries immediately and let full details/quotes load independently; reuse full detail data for 60 seconds and quotes for 30 seconds. Start personal hero and library reads together and retain fresh hero selections across navigation. Preload book code/details/quotes on pointer, keyboard or touch intent with user-scoped keys and deduplication. Lazy-load grid/picker covers with async decoding and explicit dimensions; eagerly load the main detail cover. After a successful server write, update only affected caches from canonical save/edit results and authoritative deletion counts, preserve last-quote cleanup, and reconcile incomplete lists in the background. Keep RLS, mutation locks, and account cache isolation intact. After sign-in, preload static library/book/collection modules during idle time without fetching private records; cancel scheduled work on sign-out/unmount and skip it for Save-Data. Reset the route loading/error boundary by destination and user so delayed page code shows a visible accessible spinner immediately while the header stays available. Navigating away must clear the spinner even if the previous module is still downloading. Handle module failures with a refresh option and working navigation. Keep authentication and Add words eager, query activity independent, and existing user-scoped intent prefetching intact. Retain resolved static page components alongside shared import promises so completed preloads render without a first-use code fallback.
 
 **Loading feedback:** Render a branded loading indicator in the initial HTML before JavaScript starts. Keep the application shell visible while lazy pages load. Use shared, labelled spinners for initial reads, Open Library search/debounce/rate-limit waits, selected descriptions, authentication, saving/editing/deleting quotes, and refresh. Show a non-blocking activity indicator for active queries and mutations, including background refetches. Keep existing content visible, disable duplicate submissions, clear indicators on success/error/cancellation, and respect reduced-motion preferences.
 
 **Accessibility:** All forms have labels and errors, search results support keyboard navigation, dialogs manage focus, interactive controls have visible focus, and layouts work at mobile and desktop widths.
 
-**Action consistency:** All quote-adding links/buttons use “Add quote” with a leading decorative plus icon, including mobile navigation, empty/populated library states and book/collection details. Keep the icon visible at every breakpoint and preserve existing entry-selection context.
+**Action consistency:** All quote-adding links/buttons use “Add words” with a leading decorative plus icon, including mobile navigation, empty/populated library states and book/collection details. Keep the icon visible at every breakpoint and preserve existing entry-selection context.
 
 **Browser autofill:** Non-account content forms and free-text fields explicitly opt out with `autocomplete="off"`, including quote text/references/credits/notes, collection names, filters and book discovery. Use descriptive names for unregistered controls and retain React Hook Form registration for quote payloads. Authentication fields retain meaningful `username`, `email`, `current-password` and `new-password` tokens for their respective modes; the retained display-name control uses `nickname`. Do not use hidden credential traps, invalid autocomplete tokens, readonly-on-focus tricks or automatic deletion of user-entered values. Browsers and extensions can override hints, so saved-profile Chrome verification remains separate from clean-browser regression checks.
 
@@ -324,11 +326,11 @@ Create an `AGENTS.md` summarizing architecture, conventions, security requiremen
 
 **Initial Codex prompt:**
 
-> Read `DOGEAR_TECHNICAL_SPEC.md` fully. Build the Dogeard application foundation and functional vertical slice in this repository following the specification. Start by inspecting the existing repository, then implement in the prescribed order. Use current compatible stable dependencies. Do not introduce a custom backend or expose privileged Supabase keys. Run lint, typecheck, tests, and production build, fixing issues before finishing. If Supabase credentials are not configured, implement migrations and mocked tests, then document exact manual setup and any unverified integration steps. Provide a concise final report of files changed, checks run, remaining configuration, and any deviations.
+> Read `DOGEAR_TECHNICAL_SPEC.md` fully. Build the Dog-eared application foundation and functional vertical slice in this repository following the specification. Start by inspecting the existing repository, then implement in the prescribed order. Use current compatible stable dependencies. Do not introduce a custom backend or expose privileged Supabase keys. Run lint, typecheck, tests, and production build, fixing issues before finishing. If Supabase credentials are not configured, implement migrations and mocked tests, then document exact manual setup and any unverified integration steps. Provide a concise final report of files changed, checks run, remaining configuration, and any deviations.
 
 ## 17. Collections extension
 
-Collections are private, user-owned alternatives to books for personal lines, overheard words, lyrics and other quotations. The Add quote picker has three mutually exclusive panels: Choose from your library, Find a new book and Create a collection. Existing entries default to the library panel; an empty library defaults to book discovery. New collections persist only with their first quote.
+Collections are private, user-owned alternatives to books for personal lines, overheard words, lyrics and other quotations. The Add words picker has three mutually exclusive panels: Choose from your library, Find a new book and Create a collection. Existing entries default to the library panel; an empty library defaults to book discovery. New collections persist only with their first quote.
 
 Each quote belongs to exactly one owned book association or collection, enforced by a database check and composite ownership foreign keys. Collection names trim whitespace, have 1–120 characters and are unique per owner ignoring case. Collection routes use `/collections/:id`; book routes remain unchanged. Collections support renaming, local library filtering, cached detail navigation and quote CRUD. Empty entries are removed after their final quote moves or is deleted.
 
@@ -362,12 +364,12 @@ Current discovery UI scope: expose only Open Library and suppress the catalogue 
 
 Valid 120-character unbroken collection names must fit 320, 390, 768 and 1440 px widths without horizontal page scrolling. Clamp library titles to three lines but wrap full detail titles. Keep mobile primary navigation and quote actions at least 44×44 px, with Delete visually separated. Collapse optional collection appearance under “Customise collection”, use a compact mobile selected summary, and focus/scroll to the quotation field after selection. Edit/move dialog actions stay outside the scrolling form body; use a compact edit preview. Escape closes an open nested appearance chooser before dismissing its enclosing dialog and preserves the draft. Colour controls remain hidden; palette contrast changes are deferred. Validate real mobile keyboards and assistive technologies separately from viewport emulation.
 
-Book description previews on Add quote and book detail pages wrap without an internal scroll area and display at most 320 Unicode characters including `...` when truncated. Preserve the full stored description; only presentation is shortened. Descriptions of 320 characters or fewer remain unchanged.
+Book description previews on Add words and book detail pages wrap without an internal scroll area and display at most 320 Unicode characters including `...` when truncated. Preserve the full stored description; only presentation is shortened. Descriptions of 320 characters or fewer remain unchanged.
 
 ## Design review implementation — 25 October 2026
 
-- Set the HTML document title to exactly `Dog-eard — Keep the words that stay with you.`. Render the shared `dog-eard.` wordmark with the typographic hyphen entity `&#8208;`, zero letter spacing on the hyphen itself and `0.06em` optical margins. Keep surrounding letters tightly set. Use the same treatment in navigation, footer, setup and pre-JavaScript startup HTML. The application name and user content remain unchanged.
-- Saved book/collection names are the primary page heading; “Your quotes” is a secondary section heading. Use a shared compact cover/name/attribution layout, with Edit collection grouped into the identity area. Selected items in the editor remain secondary headings.
+- Set the HTML document title to exactly `Dog-eared — Keep the words that stay with you.`. Render the shared `dog-eared.` wordmark with the typographic hyphen entity `&#8208;`, zero letter spacing on the hyphen itself and `0.06em` optical margins. Keep surrounding letters tightly set. Use the same treatment in navigation, footer, setup and pre-JavaScript startup HTML. The application name and user content remain unchanged.
+- Saved book/collection names are the primary page heading; “Your words” is a secondary section heading. Use a shared compact cover/name/attribution layout, with Edit collection grouped into the identity area. Selected items in the editor remain secondary headings.
 - Saved-book descriptions live in a collapsed “About this book” disclosure. Expanded descriptions and selected-book descriptions span the metadata width, wrap in normal document flow and remain capped at 320 Unicode characters including `...`. Full stored metadata is unchanged.
 - New quote forms keep optional attribution, source, reference and notes under “Add attribution and details” (or “Add details” for ordinary book quotes). Existing saved details open automatically when editing. Closing the disclosure preserves registered values; validation reveals and focuses an invalid optional field. Saving only quotation text requires no metadata interaction.
 - Hide the redundant preselection editor placeholder on mobile; keep the unbounded saved-library picker list and compact selected-collection summary.
@@ -377,6 +379,20 @@ Book description previews on Add quote and book detail pages wrap without an int
 
 ## Favicons and application metadata
 
-Provide `favicon.svg`, 16/32/96 px desktop PNG icons, a classic 16/32/48 px bitmap-frame `favicon.ico`, a 180 px Apple touch icon and `site.webmanifest`. Use circular forest (`#203b35`) backgrounds and white (`#FFFFFF`) logo paths, with transparent corners. Include a separately padded maskable icon whose artwork remains within the central safe circle. Declare Apple/mobile app names and touch metadata in the HTML head. Manifest name/short name are Dog-eard, with 192/512 px standard icons and a 512 px maskable variant. Preserve the current document title.
+Provide `favicon.svg`, 16/32/96 px desktop PNG icons, a classic 16/32/48 px bitmap-frame `favicon.ico`, a 180 px Apple touch icon and `site.webmanifest`. Use circular forest (`#203b35`) backgrounds and white (`#FFFFFF`) logo paths, with transparent corners. Include a separately padded maskable icon whose artwork remains within the central safe circle. Declare Apple/mobile app names and touch metadata in the HTML head. Manifest name/short name are Dog-eared, with 192/512 px standard icons and a 512 px maskable variant. Preserve the current document title.
 
 Use `%BASE_URL%` for HTML asset links; manifest identity, launch URL, scope and icons resolve relative to the manifest location for root/project-path deployment. Keep committed assets reproducible via `npm run icons:generate` using the existing SVG source and Playwright Chromium. Browser/OS launcher masks can override the exported circular silhouette.
+
+## Quotes and definitions — 26 October 2026
+
+This section extends the original quote-only requirements. Every saved item is a quote or definition, attached to exactly one owned book association or collection. Keep existing quotation IDs/content and legacy RPC compatibility. All shared creation actions use **Add words** with a leading plus; the editor stays eager at `/words/new`, with `/quotes/new` retained as an alias.
+
+After parent selection, show Quote / Definition buttons with Quote selected initially. Definitions require a trimmed word/short phrase of 1–120 characters and a nonblank meaning of up to 10,000 characters; optional source, reference and private notes remain available. Maintain independent in-memory drafts for the two modes across parent changes. Clear drafts on exit/account change, never store private content in browser history or persistent storage. Saved item type is immutable; editing changes content, not type.
+
+Provide an optional **Find meaning** English lookup through Free Dictionary API. Send only the normalised term on explicit action, encode it safely, cancel stale work, bound timeout/retries and retain manual entry on all failures. Cache in memory under user-scoped keys. Show meanings grouped with part of speech, five initially with Show more, and explicitly select/replace the meaning. Render untrusted data as plain text; accept only safe HTTPS source/licence links. Persist attribution separately from book/source credits, including after adapting a dictionary meaning. Do not present the book author as author of a definition. No audio, synonyms, automatic lookup or type conversion is required.
+
+Detail pages use a mixed newest-first list with All / Quotes / Definitions and term/meaning/text filters. Definitions display the term as a heading with the meaning below, not as a quotation. Show type-aware library counts and include definitions in the private random hero with their parent link. Lookup attribution remains stored as metadata but is not shown in the editor, cards or hero. Preserve edit/move/delete flows, source metadata and ID on moves, canonical count/cache reconciliation and last-item cleanup across both types. Keep static public homepage content unchanged.
+
+All reads and writes require authentication and ownership. New RPCs use fixed search paths, restricted grants, bounded input and existing lock ordering. Additive migration `202610260001_definitions.sql` introduces the discriminator/term/provenance, canonical mixed counts/detail reads and owner-only mixed hero/delete endpoints; older saves default to quote. Deploy the migration before the frontend. Verify manual/lookup saves, failures/cancellation/drafts, editing, moves, mixed counts, concurrency, anonymous/cross-user denial, and mobile/desktop layouts.
+
+Dictionary suggestions apply conservative whole-word US-to-UK spelling conversion before display/selection. Preserve casing, punctuation, Unicode word boundaries, URLs and attribution. Use explicit known variants, not general suffix rules; omit context-dependent pairs such as practice/practise and program/programme. Never rewrite user input, existing saved definitions or quotations. Keep the API English endpoint and a separate en-GB result cache identity. This is best-effort spelling adaptation, not guaranteed UK-only source data. Recheck meaning length after expansion.

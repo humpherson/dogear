@@ -95,7 +95,7 @@ test('shows startup feedback then a static homepage quote without a database req
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('', { waitUntil: 'commit' });
     await expect(page.locator('.app-startup')).toContainText(
-      'Opening dog-eard…',
+      'Opening dog-eared…',
     );
     await expect(page.locator('.startup-spinner')).toBeVisible();
     await expect(page.locator('.app-startup .wordmark-logo')).toBeVisible();
@@ -250,7 +250,7 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
     await (blockBackground ? backgroundGate : libraryGate);
     await route.continue().catch(() => undefined);
   });
-  await page.route('**/rest/v1/user_books?*', async (route) => {
+  await page.route('**/rest/v1/rpc/get_library_entry', async (route) => {
     reads.details++;
     await (blockBackground ? backgroundGate : detailsGate);
     await route.continue().catch(() => undefined);
@@ -262,14 +262,11 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
     }
     await route.continue().catch(() => undefined);
   });
-  await page.route(
-    '**/rest/v1/rpc/get_random_library_entry_quote',
-    async (route) => {
-      reads.hero++;
-      await (blockBackground ? backgroundGate : heroGate);
-      await route.continue().catch(() => undefined);
-    },
-  );
+  await page.route('**/rest/v1/rpc/get_random_library_item', async (route) => {
+    reads.hero++;
+    await (blockBackground ? backgroundGate : heroGate);
+    await route.continue().catch(() => undefined);
+  });
   try {
     await page.reload();
     await expect.poll(() => reads.library).toBe(1);
@@ -295,11 +292,11 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
     await expect(
       page.getByRole('heading', { name: metadata.title }),
     ).toBeVisible();
-    await expect(page.getByText('Loading your quotes…')).toBeVisible();
+    await expect(page.getByText('Loading your words…')).toBeVisible();
     releaseDetails();
     await page.getByText('About this book', { exact: true }).click();
     await expect(page.getByText(metadata.description)).toBeVisible();
-    await expect(page.getByText('Loading your quotes…')).toBeVisible();
+    await expect(page.getByText('Loading your words…')).toBeVisible();
     releaseQuotes();
     await expect(
       page.getByText('First cached passage.', { exact: true }),
@@ -336,7 +333,7 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
       .getByRole('button', { name: 'Delete quote', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'Your quotes (1)' }),
+      page.getByRole('heading', { name: 'Your words (1)' }),
     ).toBeVisible();
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
@@ -344,7 +341,7 @@ test('cached navigation, compact reads, intent prefetch and confirmed mutations 
       .getByRole('button', { name: 'Delete quote', exact: true })
       .click();
     await expect(
-      page.getByText('Your first dogeard is waiting.'),
+      page.getByText('Your first dog-eared is waiting.'),
     ).toBeVisible();
     await expect(page.locator('.book-card')).toHaveCount(0);
   } finally {
@@ -422,11 +419,11 @@ test('book search visibly spins and keeps its status after the field loses focus
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await signup(page);
     await expect(
-      page.getByText('Your first dogeard is waiting.'),
+      page.getByText('Your first dog-eared is waiting.'),
     ).toBeVisible();
     await page
       .locator('.page-heading')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     await expect(page.getByLabel('Book catalogue')).toHaveCount(0);
     const input = page.getByRole('combobox', { name: 'Find a book' });
@@ -445,7 +442,7 @@ test('book search visibly spins and keeps its status after the field loses focus
     });
     expect(rotation.animation).toBe('loading-spin');
     expect(rotation.after).not.toBe(rotation.before);
-    await page.getByRole('heading', { name: 'Keep a quote.' }).click();
+    await page.getByRole('heading', { name: 'Keep words.' }).click();
     await expect(spinner).toBeVisible();
     await expect(page.locator('.search [role="status"]')).toHaveText(
       'Searching Open Library…',
@@ -477,11 +474,13 @@ test('book search visibly spins and keeps its status after the field loses focus
   }
 });
 
-test('Add quote opens without waiting for more page code or a fresh library request', async ({
+test('Add words opens without waiting for more page code or a fresh library request', async ({
   page,
 }) => {
   await signup(page);
-  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
+  await expect(
+    page.getByText('Your first dog-eared is waiting.'),
+  ).toBeVisible();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -498,7 +497,7 @@ test('Add quote opens without waiting for more page code or a fresh library requ
     await gate;
     await route.continue();
   });
-  await page.route('**/rest/v1/user_books?*', async (route) => {
+  await page.route('**/rest/v1/rpc/get_library_entry', async (route) => {
     libraryReads++;
     await gate;
     await route.continue();
@@ -506,10 +505,10 @@ test('Add quote opens without waiting for more page code or a fresh library requ
   try {
     await page
       .locator('.page-heading')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'Keep a quote.' }),
+      page.getByRole('heading', { name: 'Keep words.' }),
     ).toBeVisible({ timeout: 1500 });
     await expect(
       page.getByRole('combobox', { name: 'Find a book' }),
@@ -524,10 +523,10 @@ test('Add quote opens without waiting for more page code or a fresh library requ
     ).toBeVisible();
     await page
       .getByRole('navigation')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'Keep a quote.' }),
+      page.getByRole('heading', { name: 'Keep words.' }),
     ).toBeVisible({ timeout: 1500 });
     expect(
       extraScripts.some((url) => /AddQuotePage-[\w-]+\.js/.test(url)),
@@ -571,7 +570,9 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
     },
   );
   await signup(page);
-  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
+  await expect(
+    page.getByText('Your first dog-eared is waiting.'),
+  ).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);
   await page.reload();
   await expect(
@@ -579,7 +580,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   ).toBeVisible();
   await page
     .locator('.page-heading')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await expect(
     page.getByRole('button', { name: 'Find a new book' }),
@@ -609,7 +610,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await checkA11y(page);
   await page.getByRole('link', { name: 'Library', exact: true }).click();
   const singleHero = page.getByRole('region', {
-    name: 'A little quip from your library',
+    name: 'From your library',
   });
   await expect(singleHero.locator('blockquote')).toHaveText(
     'The words we carry become a part of us.',
@@ -637,7 +638,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   page.on('request', countExternal);
   await page
     .getByRole('navigation')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await expect(
     page.getByRole('heading', { name: 'Choose from your library' }),
@@ -662,7 +663,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await page.getByLabel('The words you want to keep').fill('Another passage.');
   await page.getByRole('button', { name: 'Keep this quote' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Your quotes (2)' }),
+    page.getByRole('heading', { name: 'Your words (2)' }),
   ).toBeVisible();
   await expect(page).toHaveURL(bookUrl);
   expect(externalRequests).toBe(0);
@@ -670,7 +671,7 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(page.getByText('2 quotes kept')).toBeVisible();
   const hero = page.getByRole('region', {
-    name: 'A little quip from your library',
+    name: 'From your library',
   });
   await expect(hero.locator('blockquote')).toBeVisible();
   const firstHeroText = await hero.locator('blockquote').innerText();
@@ -709,11 +710,13 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
   await checkA11y(page);
   await page.getByRole('button', { name: 'Delete quote', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Your quotes (1)' }),
+    page.getByRole('heading', { name: 'Your words (1)' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete quote', exact: true }).click();
-  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
+  await expect(
+    page.getByText('Your first dog-eared is waiting.'),
+  ).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: 'Settings', exact: true }),
@@ -808,7 +811,9 @@ test('switching accounts in the same browser clears private library data', async
   await page.getByLabel('Email address').fill(emailB);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByText('Your first dogeard is waiting.')).toBeVisible();
+  await expect(
+    page.getByText('Your first dog-eared is waiting.'),
+  ).toBeVisible();
   await expect(page.locator('.library-quote-hero')).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'A private collection' }),
@@ -826,7 +831,7 @@ test('creates, reuses, renames and moves personal collections without book searc
   });
   await page
     .getByRole('navigation')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await page
     .getByRole('button', { name: 'Create a collection', exact: true })
@@ -954,7 +959,7 @@ test('creates, reuses, renames and moves personal collections without book searc
   ).toBeVisible();
   await page
     .getByRole('navigation')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await page
     .getByRole('button', { name: /Choose Little observations/ })
@@ -1249,7 +1254,7 @@ test.skip('switches catalogues and saves Google Books while retaining Open Libra
   try {
     await page
       .getByRole('navigation')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     const search = page.getByRole('combobox', { name: 'Find a book' });
     await search.fill('A Google Books trial');
@@ -1328,7 +1333,7 @@ test.skip('switches catalogues and saves Google Books while retaining Open Libra
     });
     await page
       .getByRole('navigation')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     await page
       .getByRole('button', { name: /Choose A Google Books trial/ })
@@ -1389,7 +1394,7 @@ test.skip('retries Google backend failures while showing progress and offers an 
   });
   await page
     .getByRole('navigation')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await page.getByLabel('Book catalogue').selectOption('google_books');
   const search = page.getByRole('combobox', { name: 'Find a book' });
@@ -1439,7 +1444,7 @@ test('collection layouts fit review viewports and preserve drafts and visible di
   await signup(page);
   await page
     .getByRole('navigation')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await page
     .getByRole('button', { name: 'Create a collection', exact: true })
@@ -1558,7 +1563,7 @@ test('direct account changes discard private editor state and retained collectio
   await signup(page);
   await page
     .getByRole('navigation')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await page
     .getByRole('button', { name: 'Create a collection', exact: true })
@@ -1575,7 +1580,7 @@ test('direct account changes discard private editor state and retained collectio
   const collectionUrl = page.url();
   await page
     .locator('.page-heading')
-    .getByRole('link', { name: 'Add quote', exact: true })
+    .getByRole('link', { name: 'Add words', exact: true })
     .click();
   await expect(page.getByLabel('The words you want to keep')).toBeVisible();
   expect(
@@ -1680,7 +1685,7 @@ test('cold detail-page code shows navigation feedback and idle preloads do not r
     await collectionGate;
     await route.continue().catch(() => undefined);
   });
-  await page.route('**/rest/v1/user_books?*', async (route) => {
+  await page.route('**/rest/v1/rpc/get_library_entry', async (route) => {
     reads.details++;
     await route.continue();
   });
@@ -1724,15 +1729,15 @@ test('cold detail-page code shows navigation feedback and idle preloads do not r
     // module response must not replace the editor or redirect the user.
     await page
       .getByRole('navigation')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'Keep a quote.' }),
+      page.getByRole('heading', { name: 'Keep words.' }),
     ).toBeVisible();
     await expect(opening).toHaveCount(0);
     releaseBook();
     await expect(
-      page.getByRole('heading', { name: 'Keep a quote.' }),
+      page.getByRole('heading', { name: 'Keep words.' }),
     ).toBeVisible();
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await page
@@ -1919,20 +1924,18 @@ test('design review layouts keep saved words prominent and long hero passages de
     }),
   );
   let heroText = 'A'.repeat(10000);
-  await page.route('**/rest/v1/rpc/get_random_library_entry_quote', (route) =>
+  await page.route('**/rest/v1/rpc/get_random_library_item', (route) =>
     route.fulfill({
-      json: [
-        {
-          quote_id: books[0].quote_record.id,
-          user_book_id: books[0].library_entry.id,
-          entry_kind: 'book',
-          entry_title: 'Words for Everyday Life',
-          text: heroText,
-          author: 'A Review Writer',
-          book_title: 'Words for Everyday Life',
-          published_year: '2024',
-        },
-      ],
+      json: {
+        quote_id: books[0].quote_record.id,
+        user_book_id: books[0].library_entry.id,
+        entry_kind: 'book',
+        entry_title: 'Words for Everyday Life',
+        text: heroText,
+        author: 'A Review Writer',
+        book_title: 'Words for Everyday Life',
+        published_year: '2024',
+      },
     }),
   );
   await page.reload();
@@ -1972,7 +1975,7 @@ test('design review layouts keep saved words prominent and long hero passages de
       ).toBeVisible();
       const quotesHeading = page.getByRole('heading', {
         level: 2,
-        name: 'Your quotes (1)',
+        name: 'Your words (1)',
       });
       await expect(quotesHeading).toBeVisible();
       if (viewport.width === 390)
@@ -2001,7 +2004,7 @@ test('design review layouts keep saved words prominent and long hero passages de
     ).toBeVisible();
     await page
       .locator('.page-heading')
-      .getByRole('link', { name: 'Add quote', exact: true })
+      .getByRole('link', { name: 'Add words', exact: true })
       .click();
     await expect(page.getByLabel('The words you want to keep')).toBeVisible();
     await expect(page.getByLabel('Author or speaker')).not.toBeVisible();
@@ -2054,7 +2057,7 @@ test('serves favicon, touch and manifest assets within the configured base path'
   const base = new URL(baseURL!);
   await expect(
     page.locator('meta[name="apple-mobile-web-app-title"]'),
-  ).toHaveAttribute('content', 'Dog-eard');
+  ).toHaveAttribute('content', 'Dog-eared');
   const links = await page
     .locator(
       'head link[rel="icon"], head link[rel="apple-touch-icon"], head link[rel="manifest"]',
@@ -2083,7 +2086,7 @@ test('serves favicon, touch and manifest assets within the configured base path'
   }
   const manifestURL = links.find((link) => link.rel === 'manifest')!.href;
   const manifest = await (await request.get(manifestURL)).json();
-  expect(manifest.name).toBe('Dog-eard');
+  expect(manifest.name).toBe('Dog-eared');
   expect(new URL(manifest.start_url, manifestURL).href).toBe(base.href);
   expect(new URL(manifest.scope, manifestURL).href).toBe(base.href);
   expect(

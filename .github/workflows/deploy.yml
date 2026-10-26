@@ -1,4 +1,4 @@
-name: Verify and deploy Dogear
+name: Verify and deploy Dog-eared
 on:
   pull_request:
   push:

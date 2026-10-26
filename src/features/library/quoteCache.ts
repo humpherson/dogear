@@ -123,12 +123,17 @@ export async function cacheSavedQuote(
         entry_kind: kind,
         entry_title: entryTitle(entry),
         text: quote.text,
+        item_type: quote.item_type || 'quote',
+        term: quote.term,
+        lookup_attribution: quote.lookup_attribution,
         author:
-          quote.credit_mode === 'custom'
-            ? quote.credit_author || ''
-            : isCollection(entry)
-              ? ''
-              : entry.books.authors.join(', ') || 'Unknown author',
+          quote.item_type === 'definition'
+            ? ''
+            : quote.credit_mode === 'custom'
+              ? quote.credit_author || ''
+              : isCollection(entry)
+                ? ''
+                : entry.books.authors.join(', ') || 'Unknown author',
         book_title:
           quote.credit_mode === 'custom'
             ? quote.credit_source || ''
@@ -164,6 +169,9 @@ export async function cacheEditedQuote(
       ? {
           ...old,
           text: quote.text,
+          item_type: quote.item_type || 'quote',
+          term: quote.term,
+          lookup_attribution: quote.lookup_attribution,
           ...(quote.credit_mode === 'custom'
             ? {
                 author: quote.credit_author || '',
@@ -190,7 +198,9 @@ export async function cacheDeletedQuote(
   const old = client.getQueryData<FullLibraryEntry | null>(
     entryKey(userId, id, kind),
   );
-  if (old || result.remaining_count === 0)
+  if ('library_entry' in result)
+    updateEntry(client, userId, kind, id, result.library_entry ?? null);
+  else if (old || result.remaining_count === 0)
     updateEntry(
       client,
       userId,
@@ -275,6 +285,9 @@ export async function cacheMovedQuote(
     old?.quote_id === result.quote_record.id
       ? {
           ...old,
+          item_type: result.quote_record.item_type || 'quote',
+          term: result.quote_record.term,
+          lookup_attribution: result.quote_record.lookup_attribution,
           user_book_id: target.id,
           entry_kind: kind,
           entry_title: entryTitle(target),

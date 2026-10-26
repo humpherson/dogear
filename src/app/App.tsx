@@ -1,7 +1,7 @@
 import { Wordmark } from '../components/layout/Wordmark';
 import { LibraryPage, BookPage, CollectionPage } from './pageLoaders';
 import { AuthPage } from '../pages/AuthPage';
-import { AddQuotePage } from '../pages/AddQuotePage';
+import { AddWordsPage } from '../pages/AddWordsPage';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { HashRouter, Navigate, Route, Routes, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -44,7 +44,7 @@ export function App({ callbackError }: { callbackError?: string }) {
         </span>
         <h1>A little setup first.</h1>
         <p>
-          Dogeard needs Supabase to save your library and keep your notes
+          Dog-eared needs Supabase to save your library and keep your notes
           private.
         </p>
         <ol>
@@ -96,7 +96,8 @@ export function App({ callbackError }: { callbackError?: string }) {
                   path="collections/:collectionId"
                   element={<CollectionPage />}
                 />
-                <Route path="quotes/new" element={<AddQuotePage />} />
+                <Route path="words/new" element={<AddWordsPage />} />
+                <Route path="quotes/new" element={<AddWordsPage />} />
                 <Route
                   path="settings"
                   element={<Navigate to="/library" replace />}

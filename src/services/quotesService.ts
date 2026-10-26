@@ -1,5 +1,5 @@
 import { db } from '../lib/supabase';
-import { quoteSchema, type QuoteInput } from '../lib/validation';
+import { savedItemSchema, type SavedItemInput } from '../lib/validation';
 import type {
   BookSearchResult,
   LibraryBook,
@@ -13,46 +13,50 @@ export type DeletedQuote = {
   user_book_id: string | null;
   collection_id?: string | null;
   remaining_count: number;
+  library_entry?: FullLibraryEntry | null;
 };
 export async function saveQuote(
   book: BookSearchResult,
-  input: QuoteInput,
+  input: SavedItemInput,
 ): Promise<SavedQuote> {
-  const quote = quoteSchema.parse(input);
+  const quote = savedItemSchema.parse(input);
   const { data, error } = await db().rpc('save_quote_with_book_result', {
     book,
     quote,
   });
   if (error) throw error;
-  if (!data?.[0]) throw new Error('The quotation could not be saved.');
+  if (!data?.[0]) throw new Error('The words could not be saved.');
   return data[0] as unknown as SavedQuote;
 }
-export async function editQuote(id: string, input: QuoteInput): Promise<Quote> {
+export async function editQuote(
+  id: string,
+  input: SavedItemInput,
+): Promise<Quote> {
   const { data, error } = await db().rpc('edit_library_quote', {
     quote_id: id,
-    quote: quoteSchema.parse(input),
+    quote: savedItemSchema.parse(input),
   });
   if (error) throw error;
   return data as unknown as Quote;
 }
 export async function deleteQuote(id: string): Promise<DeletedQuote> {
-  const { data, error } = await db().rpc('delete_library_quote', {
-    quote_id: id,
+  const { data, error } = await db().rpc('delete_library_item', {
+    item_id: id,
   });
   if (error) throw error;
-  if (!data?.[0]) throw new Error('The quotation could not be deleted.');
-  return data[0];
+  if (!data) throw new Error('The words could not be deleted.');
+  return data as unknown as DeletedQuote;
 }
 export type CollectionSavedQuote = {
   quote_record: Quote;
   library_entry: FullLibraryEntry;
 };
 export async function saveCollectionQuote(
-  input: QuoteInput,
+  input: SavedItemInput,
   target: { id: string } | CollectionDraft,
 ): Promise<CollectionSavedQuote> {
   const { data, error } = await db().rpc('save_styled_collection_quote', {
-    quote: quoteSchema.parse(input),
+    quote: savedItemSchema.parse(input),
     ...('id' in target
       ? { collection_id: target.id }
       : {
@@ -67,7 +71,7 @@ export async function saveCollectionQuote(
         }),
   });
   if (error) throw error;
-  if (!data?.[0]) throw new Error('The quotation could not be saved.');
+  if (!data?.[0]) throw new Error('The words could not be saved.');
   return data[0] as unknown as CollectionSavedQuote;
 }
 export async function renameCollection(

@@ -63,7 +63,7 @@ function renderLanding(state: Partial<AuthState>) {
 it('does not fetch a quote while initial authentication resolves', () => {
   const get = vi.spyOn(globalThis, 'fetch');
   renderLanding({ loading: true });
-  expect(screen.getByRole('status')).toHaveTextContent('Opening dog-eard');
+  expect(screen.getByRole('status')).toHaveTextContent('Opening dog-eared');
   expect(get).not.toHaveBeenCalled();
 });
 it('redirects signed-in users without fetching a homepage quote', async () => {

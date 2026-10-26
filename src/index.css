@@ -1575,3 +1575,78 @@ footer .wordmark-logo {
     width: 44px;
   }
 }
+
+.item-type-switch {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.item-type-switch button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-muted);
+}
+.item-type-switch button:hover {
+  background: transparent;
+  color: var(--color-forest);
+}
+.item-type-switch button[aria-pressed='true'] {
+  border-bottom-color: var(--color-forest);
+  color: var(--color-forest);
+}
+.item-kind {
+  color: var(--color-forest);
+  font-size: var(--type-label);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.definition-term {
+  font-family: Georgia, serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.definition-meaning {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  max-width: 75ch;
+}
+.dictionary-lookup {
+  margin: 12px 0 20px;
+}
+.dictionary-lookup > [role='status'] {
+  margin-top: 16px;
+  font-size: var(--type-support);
+}
+.dictionary-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.dictionary-results li {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 16px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.dictionary-results .eyebrow {
+  margin-bottom: 8px;
+}
+.library-quote-hero .hero-passage {
+  font-family: Georgia, serif;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 56ch;
+  margin-bottom: 24px;
+}

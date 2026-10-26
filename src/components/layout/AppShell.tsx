@@ -60,9 +60,9 @@ export function AppShell() {
                 <BookOpen size={18} />
                 Library
               </NavLink>
-              <NavLink className="add-quote" to="/quotes/new">
+              <NavLink className="add-quote" to="/words/new">
                 <Plus size={18} aria-hidden="true" />
-                Add quote
+                Add words
               </NavLink>
               <button
                 type="button"

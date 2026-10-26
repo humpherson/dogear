@@ -90,16 +90,16 @@ it('requests an owner-only random quote while excluding the current quote ID', a
     book_title: 'Book',
     published_year: '2020',
   };
-  rpc.mockResolvedValue({ data: [quote], error: null });
+  rpc.mockResolvedValue({ data: quote, error: null });
   expect(await getRandomLibraryQuote('q1')).toEqual(quote);
-  expect(rpc).toHaveBeenCalledWith('get_random_library_entry_quote', {
-    exclude_quote_id: 'q1',
+  expect(rpc).toHaveBeenCalledWith('get_random_library_item', {
+    exclude_item_id: 'q1',
   });
   expect(from).not.toHaveBeenCalled();
 });
 it('handles an empty personal quote pool and database errors', async () => {
   rpc
-    .mockResolvedValueOnce({ data: [], error: null })
+    .mockResolvedValueOnce({ data: null, error: null })
     .mockResolvedValueOnce({ data: null, error: new Error('Offline') });
   expect(await getRandomLibraryQuote()).toBeNull();
   await expect(getRandomLibraryQuote()).rejects.toThrow('Offline');

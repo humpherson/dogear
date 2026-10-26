@@ -1,3 +1,8 @@
+import {
+  ItemFilters,
+  matchesItem,
+  type ItemFilter,
+} from '../components/quotes/ItemFilters';
 import { Plus } from 'lucide-react';
 import { protectCollectionChooserEscape } from '../components/collections/collectionDialog';
 import { useState } from 'react';
@@ -35,6 +40,7 @@ export function CollectionPage() {
   const [filter, setFilter] = useState(''),
     [renaming, setRenaming] = useState(false),
     [name, setName] = useState('');
+  const [typeFilter, setTypeFilter] = useState<ItemFilter>('all');
   const [appearance, setAppearance] = useState<CollectionAppearance>({});
   const entry =
     collection.isSuccess && !collection.data
@@ -71,7 +77,7 @@ export function CollectionPage() {
       </section>
     );
   const visible = quotes.data?.filter((quote) =>
-    quote.text.toLocaleLowerCase().includes(filter.toLocaleLowerCase()),
+    matchesItem(quote, typeFilter, filter),
   );
   return (
     <>
@@ -113,7 +119,7 @@ export function CollectionPage() {
                 <Dialog.Title>Edit collection</Dialog.Title>
                 <Dialog.Description>
                   Your collection name stays private. Renaming it won’t change
-                  quote credits.
+                  your saved words.
                 </Dialog.Description>
                 <form
                   autoComplete="off"
@@ -181,31 +187,32 @@ export function CollectionPage() {
 
       <div className="page-heading">
         <h2 className="section-title">
-          Your quotes{' '}
+          Your words{' '}
           <span className="muted">
             ({entry.quotes[0]?.count ?? quotes.data?.length ?? 0})
           </span>
         </h2>
         <Link
           className="button"
-          to="/quotes/new"
+          to="/words/new"
           state={{ ownerId: entry.user_id, collectionId: entry.id }}
         >
           <Plus size={18} aria-hidden="true" />
-          Add quote
+          Add words
         </Link>
       </div>
-      <label htmlFor="collection-filter">Filter your quotes</label>
+      <ItemFilters value={typeFilter} onChange={setTypeFilter} />
+      <label htmlFor="collection-filter">Filter your words</label>
       <input
         autoComplete="off"
         id="collection-filter"
         name="collection-quote-filter"
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
-        placeholder="Find a word or phrase…"
+        placeholder="Find a word, phrase or meaning…"
       />
       {quotes.isPending && (
-        <LoadingIndicator>Loading your quotes…</LoadingIndicator>
+        <LoadingIndicator>Loading your words…</LoadingIndicator>
       )}
       {quotes.isError && (
         <p role="alert">
@@ -224,7 +231,7 @@ export function CollectionPage() {
           />
         ))
       ) : quotes.isSuccess ? (
-        <p>No quotes match your filter.</p>
+        <p>No words match your filter.</p>
       ) : null}
     </>
   );

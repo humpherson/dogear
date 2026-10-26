@@ -10,6 +10,7 @@ import {
   type CollectionDraft,
   type CollectionAppearance,
   isCollection,
+  countLabel,
 } from '../../types';
 import { Cover } from './BookDetails';
 import { CollectionAppearanceFields } from '../collections/CollectionAppearanceFields';
@@ -64,8 +65,7 @@ export function BookPicker({
             content: (
               <>
                 <p className="muted">
-                  Keep another passage in a book or collection you’ve already
-                  saved.
+                  Keep more words in a book or collection you’ve already saved.
                 </p>
                 {library.isPending ? (
                   <LoadingIndicator>Loading your books…</LoadingIndicator>
@@ -136,11 +136,7 @@ export function BookPicker({
                                       'Unknown author'}
                                 </span>{' '}
                                 <span className="muted">
-                                  {entry.quotes[0]?.count || 0}{' '}
-                                  {(entry.quotes[0]?.count || 0) === 1
-                                    ? 'quote'
-                                    : 'quotes'}{' '}
-                                  kept
+                                  {countLabel(entry)} kept
                                 </span>
                               </span>
                             </button>
@@ -182,8 +178,9 @@ export function BookPicker({
                 }}
               >
                 <p className="muted">
-                  Keep original thoughts, lyrics and lines from anywhere. Your
-                  collection appears when you save its first quote.
+                  Keep original thoughts, lyrics, quotes and definitions from
+                  anywhere. Your collection appears when you save its first
+                  quote.
                 </p>
                 <label htmlFor={`${id}-collection`}>Collection name</label>
                 <input

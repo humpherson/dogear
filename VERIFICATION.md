@@ -1,4 +1,4 @@
-# Dogear verification
+# Dog-eared verification
 
 Verified locally on 2026-10-24 with Node 22.22.2, Chromium, Docker Desktop, and project-pinned Supabase CLI 2.122.0.
 
@@ -255,15 +255,15 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 
 - Implemented design review findings 1–6: compact shared detail headers with entry-name h1/quote-section h2, full-width optional book descriptions, grouped collection actions, collapsible optional quote metadata, a reduced mobile preselection state, expandable long hero previews, broader onboarding copy and shared visual tokens. Saved colours, hidden colour controls, static homepage quotes and user-scoped data behaviour are unchanged.
 - Long private hero passages preview at most 160 Unicode characters/three source lines, with deliberate full-text expansion and reset on refresh. Quote forms retain drafts across disclosure toggles, open existing metadata on edit, and reveal/focus invalid optional fields. Description presentation remains capped at 320 characters without internal scrolling.
-- The wordmark is now dog-eard. across header/footer/setup/startup, using `&#8208;` with 0.06em optical margins. The HTML document title is exactly `Dog-eard — Keep the words that stay with you.`. Application names in other copy and user content were not globally renamed.
+- The wordmark is now dog-eared. across header/footer/setup/startup, using `&#8208;` with 0.06em optical margins. The HTML document title is exactly `Dog-eared — Keep the words that stay with you.`. Application names in other copy and user content were not globally renamed.
 - All 126 unit tests and 32 desktop/mobile browser checks passed; four hidden Google discovery checks remain skipped. New checks exercise maximum-length, multiline and Unicode hero text, disclosure draft preservation, hidden-field validation/focus, primary/secondary headings, covers/placeholders, description expansion and four viewport widths.
 - Captured 68 final local production-build screens at 320, 390, 768 and 1440 px with synthetic fixtures; no horizontal document overflow was measured. At 390 px the book quote-section heading moved from about 705 to 482 px; the collapsed selected-collection quote form is 368 px tall versus roughly 792 px previously. Fixtures were removed; no live account records or hosted schema changed.
 - Lint and typecheck passed. Updated evidence and remaining physical-device/assistive-technology limits are in `spec/DESIGN-REVIEW.md`. Frontend deployment remains pending.
-- Formatting, diff whitespace checks and root/project production builds passed. Both built HTML files contain the exact final title `Dog-eard — Keep the words that stay with you.`. The temporary design preview was stopped after capture.
+- Formatting, diff whitespace checks and root/project production builds passed. Both built HTML files contain the exact final title `Dog-eared — Keep the words that stay with you.`. The temporary design preview was stopped after capture.
 
 ## 25 October 2026 — supplied app logo
 
-- Added the supplied SVG as `public/dogeard-logo.svg`, alongside the shared wordmark in header, footer, setup and startup HTML. Decorative image semantics avoid repeating the adjacent accessible name. URLs respect the configured Vite base path; sizing preserves the SVG aspect ratio, with smaller footer/mobile variants.
+- Added the supplied SVG as `public/dog-eared-logo.svg`, alongside the shared wordmark in header, footer, setup and startup HTML. Decorative image semantics avoid repeating the adjacent accessible name. URLs respect the configured Vite base path; sizing preserves the SVG aspect ratio, with smaller footer/mobile variants.
 - At the user's request, added a matching rounded outline and increased it to 10 SVG units for a heavier appearance at small sizes. The original path geometry, viewBox and colour are preserved. The Downloads source file was not changed.
 - Lint, typecheck, formatting and 126 unit tests passed. Two focused desktop/mobile browser checks passed with the project base path, verifying startup/header/footer SVG loading and no horizontal overflow at 320, 390 and 1440 px. A local before/after render was inspected at representative logo sizes before the final small outline increase.
 - Root/project production builds passed with the final outline. Both output SVGs match the repository asset; XML validation confirms the geometry and colour are unchanged. Frontend deployment remains pending.
@@ -281,3 +281,26 @@ Baseline foundation verification also passed `npm ci` with zero reported vulnera
 - Regenerate using `npm run icons:generate` and existing Playwright Chromium. HTML links use the Vite base path; manifest icon, identity, launch and scope URLs are relative to the manifest location.
 - Lint, typecheck, formatting, whitespace checks and 126 unit tests passed. Four focused desktop/mobile browser checks passed across root/project paths, verifying declarations, asset responses, ICO structure, PNG dimensions and manifest URL resolution. Both production builds passed with byte-matching final icon/manifest assets.
 - The live favicon checker and physical-device home-screen rendering were not retested. Launchers can apply their own masks to the exported circular images.
+
+## 26 October 2026 — dog-eared branding
+
+- Replaced the old app branding with dog-eared throughout active UI, typographic wordmarks, startup/setup states, accessible labels, document/app/Apple metadata, SVG titles, manifest names, documentation and workflow/package display names. Renamed the source asset to `public/dog-eared-logo.svg` and updated all consumers; regenerated the derived icons.
+- Retained the configured live hostname `dogeard.co.uk`, repository project paths, local Supabase project ID, workflow concurrency identity, recovery storage key and manifest identity/scope. These compatibility identifiers do not display the app brand; existing data, recovery sessions and installations are preserved.
+- Lint, typecheck, formatting, 126 unit tests and all 34 desktop/mobile browser checks passed; four hidden Google discovery checks remain skipped. Browser coverage includes renamed logo loading, 320/390/1440 px layouts, app metadata, quote lifecycle, account changes, password recovery and icon/manifest resources.
+- A source scan found no old brand spelling in active UI, metadata, assets or scripts. Remaining old-spelling references are the real hostname and documented compatibility identifiers. No hosted data, schema, DNS or repository settings were changed.
+- Root and project-path production builds passed. Both outputs contain the new logo filename, updated document/manifest branding and no obsolete logo asset. Frontend deployment is required for the new branding to appear live.
+
+## 26 October 2026 — quotes and definitions
+
+- Added Add words with book/collection selection followed by Quote / Definition, independent mode drafts, manual meanings and explicit English dictionary lookup. Mixed detail lists support type/text filters, type-aware counts, edit/move/delete and personal hero definitions. Static public homepage content is unchanged. Legacy quote URLs/RPC payloads remain compatible; saved type is immutable.
+- Added additive migration `202610260001_definitions.sql`, applied locally without a database reset, and regenerated database types. Validated owner-only reads/writes, anonymous/cross-user denial, bounded term/meaning/provenance, legacy edits, canonical counts, mixed last-item cleanup, moves and concurrency. No hosted schema or live user records were changed.
+- 136 unit tests and 222 database checks passed (88 foundation, 94 collection and 40 definition checks). Full project-path Chromium suite: 38 passed, four hidden Google discovery checks skipped, across desktop and mobile. New browser scenarios cover manual/lookup definitions, explicit replacement, cancellation/404 fallback, source/licence persistence, mode drafts, fixed-type edits, search/filters, hero, moves/deletes and new collections whose first item is a definition.
+- Captured local production-build screens at 320, 390, 768 and 1440 px using disposable local fixtures; no horizontal document overflow was measured. Inspected mobile editor and desktop mixed detail layout. Browser accessibility checks passed. Screenshots and browser emulation do not verify physical-device keyboards or screen readers; external dictionary responses are mocked in automated tests.
+- Hosted migration must precede frontend deployment. Dictionary lookup needs no key or repository variables. Live deployment and physical-device checks remain unverified.
+
+- Final lint, typecheck, formatting, whitespace checks and production builds for `/` and `/dogear/` passed. Vite reports its bundle-size advisory for the eager main chunk (702 kB minified); authentication and the editor remain eager to preserve immediate navigation. The temporary visual-review preview was stopped.
+
+## 26 October 2026 — UK spelling in dictionary suggestions
+
+- Retained Free Dictionary API and added a curated whole-word US-to-UK spelling map for suggested meanings, including common inflections. Conversion preserves ordinary casing, punctuation, Unicode boundaries, source/licence metadata and URLs. Ambiguous pairs such as practice/practise, program/programme and meter/metre remain unchanged; manual text, lookup terms and existing saved records are not rewritten. This is best-effort adaptation, not an EN-GB source guarantee. Converted meanings are checked against the saved-text limit and cached under an en-GB result identity.
+- All 143 unit tests and four focused desktop/mobile definition browser tests passed, including API fixture text containing “color” appearing and saving as “colour”, manual draft preservation, editing, filters, moves, deletes, source attribution and lookup failure/cancellation. Lint, typecheck, formatting, whitespace checks and production builds passed. No schema/provider/key changes are required; frontend deployment remains pending.

@@ -5,7 +5,7 @@ import { useAuth } from '../features/auth/AuthProvider';
 import { LandingQuote } from '../components/quotes/LandingQuote';
 export function LandingPage() {
   const { session, loading } = useAuth();
-  if (loading) return <LoadingIndicator>Opening dog-eard…</LoadingIndicator>;
+  if (loading) return <LoadingIndicator>Opening dog-eared…</LoadingIndicator>;
   if (session) return <Navigate to="/library" replace />;
   return (
     <>
@@ -28,7 +28,7 @@ export function LandingPage() {
         </div>
         <LandingQuote />
       </section>
-      <section className="intro-grid" aria-label="How Dogeard works">
+      <section className="intro-grid" aria-label="How Dog-eared works">
         <article>
           <Library />
           <h2>Find a home for your words</h2>
@@ -41,8 +41,8 @@ export function LandingPage() {
           <Bookmark />
           <h2>Keep a good line</h2>
           <p>
-            Save a passage or a passing thought. Add a source, a reference or a
-            note whenever you like.
+            Save a quote, a definition or a passing thought. Add a source, a
+            reference or a note whenever you like.
           </p>
         </article>
         <article>

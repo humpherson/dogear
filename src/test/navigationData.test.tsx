@@ -82,12 +82,12 @@ it('renders a cached book summary before full details and quotes arrive', async 
   expect(
     screen.getByRole('heading', { name: 'Cached book' }),
   ).toBeInTheDocument();
-  expect(screen.getByText('Loading your quotes…')).toBeInTheDocument();
+  expect(screen.getByText('Loading your words…')).toBeInTheDocument();
   await act(async () => details.resolve(result.library_entry));
   expect(
     await screen.findByText('Full stored description'),
   ).toBeInTheDocument();
-  expect(screen.getByText('Loading your quotes…')).toBeInTheDocument();
+  expect(screen.getByText('Loading your words…')).toBeInTheDocument();
   await act(async () => quotes.resolve([result.quote_record]));
   expect(await screen.findByText('Saved words')).toBeInTheDocument();
 });

@@ -3,7 +3,7 @@ export function Wordmark() {
     <>
       <img
         className="wordmark-logo"
-        src={`${import.meta.env.BASE_URL}dogeard-logo.svg`}
+        src={`${import.meta.env.BASE_URL}dog-eared-logo.svg`}
         width="48"
         height="28"
         alt=""
@@ -11,7 +11,7 @@ export function Wordmark() {
         decoding="async"
       />
       <span className="wordmark-text">
-        dog<span className="wordmark-hyphen">&#8208;</span>eard
+        dog<span className="wordmark-hyphen">&#8208;</span>eared
         <span className="wordmark-dot">.</span>
       </span>
     </>

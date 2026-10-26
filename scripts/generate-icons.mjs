@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 
 const publicDir = new URL('../public/', import.meta.url);
 const sourceLogo = await readFile(
-  new URL('dogeard-logo.svg', publicDir),
+  new URL('dog-eared-logo.svg', publicDir),
   'utf8',
 );
 const logo = sourceLogo.replace(/<path\b[^>]*>/g, (path) =>
@@ -23,7 +23,7 @@ function circularIcon(width) {
     '<svg ',
     `<svg x="${(512 - width) / 2}" y="${(512 - height) / 2}" width="${width}" height="${height}" `,
   );
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><title>Dog-eard</title><rect width="512" height="512" rx="256" fill="#203b35"/>${inset}</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><title>Dog-eared</title><rect width="512" height="512" rx="256" fill="#203b35"/>${inset}</svg>\n`;
 }
 
 // A 352px-wide mark fits wholly inside the maskable icon's central safe circle.

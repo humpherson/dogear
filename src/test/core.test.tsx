@@ -285,7 +285,7 @@ describe('library and quote interactions', () => {
     vi.spyOn(library, 'getLibrary').mockResolvedValue([]);
     providers(<LibraryPage />);
     expect(
-      await screen.findByText('Your first dogeard is waiting.'),
+      await screen.findByText('Your first dog-eared is waiting.'),
     ).toBeInTheDocument();
   });
   it('renders one card per association and the server quote count', async () => {

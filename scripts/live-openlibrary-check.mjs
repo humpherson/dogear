@@ -77,7 +77,7 @@ try {
   assert.equal(saved.data.authors.includes('Jane Austen'), true);
   assert.ok(saved.data.published_date);
   await page.screenshot({
-    path: '/tmp/dogear-openlibrary-live.png',
+    path: '/tmp/dog-eared-openlibrary-live.png',
     fullPage: true,
   });
   console.log(
@@ -85,7 +85,7 @@ try {
   );
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await page.getByRole('button', { name: 'Delete quote', exact: true }).click();
-  await page.getByText('Your first dogear is waiting.').waitFor();
+  await page.getByText('Your first dog-eared is waiting.').waitFor();
   console.log('PASS live quote deletion and last-quote library cleanup');
 } finally {
   await browser?.close();

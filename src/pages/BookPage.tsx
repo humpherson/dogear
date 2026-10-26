@@ -1,3 +1,8 @@
+import {
+  ItemFilters,
+  matchesItem,
+  type ItemFilter,
+} from '../components/quotes/ItemFilters';
 import { Plus } from 'lucide-react';
 import { LoadingIndicator } from '../components/ui/LoadingIndicator';
 import { useState } from 'react';
@@ -18,6 +23,7 @@ export function BookPage() {
     navigate = useNavigate();
   const client = useQueryClient();
   const [filter, setFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<ItemFilter>('all');
   const book = useQuery(bookQueryOptions(session?.user.id, userBookId));
   const quotes = useQuery(quotesQueryOptions(session?.user.id, userBookId));
   const entry =
@@ -42,7 +48,7 @@ export function BookPage() {
       </section>
     );
   const visible = quotes.data?.filter((quote) =>
-    quote.text.toLowerCase().includes(filter.toLowerCase()),
+    matchesItem(quote, typeFilter, filter),
   );
   return (
     <>
@@ -63,31 +69,32 @@ export function BookPage() {
       )}
       <div className="page-heading">
         <h2 className="section-title">
-          Your quotes{' '}
+          Your words{' '}
           <span className="muted">
             ({entry.quotes[0]?.count ?? quotes.data?.length ?? 0})
           </span>
         </h2>
         <Link
           className="button"
-          to="/quotes/new"
+          to="/words/new"
           state={{ ownerId: entry.user_id, book: entry.books, userBookId }}
         >
           <Plus size={18} aria-hidden="true" />
-          Add quote
+          Add words
         </Link>
       </div>
-      <label htmlFor="quote-filter">Filter your quotes</label>
+      <ItemFilters value={typeFilter} onChange={setTypeFilter} />
+      <label htmlFor="quote-filter">Filter your words</label>
       <input
         autoComplete="off"
         id="quote-filter"
         name="book-quote-filter"
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
-        placeholder="Find a word or phrase…"
+        placeholder="Find a word, phrase or meaning…"
       />
       {quotes.isPending && (
-        <LoadingIndicator>Loading your quotes…</LoadingIndicator>
+        <LoadingIndicator>Loading your words…</LoadingIndicator>
       )}
       {quotes.isError && (
         <p role="alert">
@@ -109,7 +116,7 @@ export function BookPage() {
           />
         ))
       ) : quotes.isSuccess ? (
-        <p>No quotes match your filter.</p>
+        <p>No words match your filter.</p>
       ) : null}
     </>
   );
