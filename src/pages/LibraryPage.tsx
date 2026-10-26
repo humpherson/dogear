@@ -20,16 +20,7 @@ export function LibraryPage() {
   useQuery(heroQueryOptions(session?.user.id));
   return (
     <div className="library-page">
-      {!!query.data?.length && (
-        <LibraryQuoteHero
-          key={session?.user.id}
-          quoteCount={query.data.reduce(
-            (total, book) => total + (book.quotes[0]?.count || 0),
-            0,
-          )}
-        />
-      )}
-      <div className="library-content">
+      <div className="library-content library-heading">
         <div className="page-heading">
           <div>
             <p className="eyebrow">Words to come back to</p>
@@ -43,7 +34,17 @@ export function LibraryPage() {
             Add words
           </Link>
         </div>
-
+      </div>
+      {!!query.data?.length && (
+        <LibraryQuoteHero
+          key={session?.user.id}
+          quoteCount={query.data.reduce(
+            (total, book) => total + (book.quotes[0]?.count || 0),
+            0,
+          )}
+        />
+      )}
+      <div className="library-content">
         {query.isPending ? (
           <LoadingIndicator>Gathering your books…</LoadingIndicator>
         ) : query.isError && !query.data ? (

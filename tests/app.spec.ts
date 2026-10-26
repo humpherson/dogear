@@ -685,7 +685,11 @@ test('real signup, quote lifecycle, refresh and navigation logout', async ({
     .boundingBox();
   expect(heroBounds!.x).toBe(0);
   expect(heroBounds!.width).toBe(page.viewportSize()!.width);
-  expect(headingBounds!.y).toBeGreaterThanOrEqual(
+  expect(heroBounds!.y).toBeGreaterThanOrEqual(
+    headingBounds!.y + headingBounds!.height,
+  );
+  const gridBounds = await page.locator('.library-grid').boundingBox();
+  expect(gridBounds!.y).toBeGreaterThanOrEqual(
     heroBounds!.y + heroBounds!.height,
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(

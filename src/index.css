@@ -403,6 +403,12 @@ main:has(> .library-page) {
   padding: 45px 40px 80px;
   margin: auto;
 }
+.library-heading {
+  padding-bottom: 35px;
+}
+.library-heading .page-heading {
+  margin: 0;
+}
 .library-quote-hero {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -896,6 +902,9 @@ hr {
   }
   .library-content {
     padding: 28px 20px 60px;
+  }
+  .library-heading {
+    padding-bottom: 28px;
   }
   .library-quote-hero {
     padding: 28px 20px;
